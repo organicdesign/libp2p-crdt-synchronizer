@@ -1,1 +1,1 @@
-// Export your project files here.
+import { DistributedStateSynchronizer } from "distributed-state-synchronizer";
