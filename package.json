@@ -1,4 +1,5 @@
 {
+  "type": "module",
   "name": "typescript-template",
   "version": "1.0.0",
   "description": "A template for NodeJS projects using typescript.",
