@@ -1,20 +1,31 @@
 import type { Libp2p } from "libp2p";
-// import { DistributedStateSynchronizer } from "distributed-state-synchronizer";
+import { DistributedStateSynchronizer } from "distributed-state-synchronizer";
 import * as lp from "it-length-prefixed";
 import { pipe } from "it-pipe";
+import { fromString as uint8ArrayFromString } from "uint8arrays/from-string";
+import { toString as uint8ArrayToString } from "uint8arrays/to-string";
 
 const PROTOCOL = "/libp2p-state-replication/0.0.1";
 
 export class StateReplicator {
 	private node: Libp2p;
+	private dss = new DistributedStateSynchronizer();
 
 	constructor(node: Libp2p) {
+		this.dss.set("/test", node.peerId.toString());
+
 		node.handle(PROTOCOL, async ({ stream }) => {
-			await pipe(stream, lp.decode(), async function (source) {
+			const that = this;
+
+			await pipe(stream, lp.decode(), async function* (source) {
 				for await (const message of source) {
-					console.log("Got filter", message);
+					const filter = message.subarray();
+
+					const { blocks } = await that.dss.sync({ blocks: [], filter });
+
+					yield uint8ArrayFromString(JSON.stringify(blocks));
 				}
-			});
+			}, lp.encode(), stream);
 		});
 
 		this.node = node;
@@ -26,8 +37,17 @@ export class StateReplicator {
 		for (const connection of connections) {
 			// This will throw if the node does not support this proto
 			const stream = await connection.newStream(PROTOCOL);
+			const { filter } = await this.dss.sync();
+			const that = this;
 
-			console.log("need to request blocks");
+			await pipe([filter], lp.encode(), stream, lp.decode(), async function (source) {
+				for await (const message of source) {
+					const str = uint8ArrayToString(message.subarray());
+					const blocks = JSON.parse(str);
+
+					await that.dss.sync({ blocks, filter: new Uint8Array() });
+				}
+			});
 		}
 	}
 }
