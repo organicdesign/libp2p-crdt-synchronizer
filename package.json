@@ -7,7 +7,8 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "test": "jest --config=jest.config.cjs ./test/*",
-    "build": "mkdir -p dist && touch dist/cleanup && rm dist/* && tsc -b"
+    "build": "mkdir -p dist && touch dist/cleanup && rm dist/* && tsc -b",
+    "lint": "eslint ./src/* --fix"
   },
   "repository": {
     "type": "git",
@@ -27,6 +28,10 @@
     "typescript": "^4.8.4"
   },
   "dependencies": {
-    "distributed-state-synchronizer": "git+ssh://git@code.organicdesign.nz:222/organicdesign/distributed-state-synchronizer.git"
+    "distributed-state-synchronizer": "git+ssh://git@code.organicdesign.nz:222/organicdesign/distributed-state-synchronizer.git",
+    "it-length-prefixed": "^8.0.3",
+    "it-pipe": "^2.0.4",
+    "it-pushable": "^3.1.0",
+    "libp2p": "^0.40.0"
   }
 }
