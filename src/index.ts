@@ -9,11 +9,9 @@ const PROTOCOL = "/libp2p-state-replication/0.0.1";
 
 export class StateReplicator {
 	private node: Libp2p;
-	private dss = new DistributedStateSynchronizer();
+	public dss = new DistributedStateSynchronizer();
 
 	constructor(node: Libp2p) {
-		this.dss.set("/test", node.peerId.toString());
-
 		node.handle(PROTOCOL, async ({ stream }) => {
 			const that = this;
 
