@@ -7,12 +7,10 @@ import type { Libp2p } from "libp2p";
 import { DistributedStateSynchronizer } from "distributed-state-synchronizer";
 import * as lp from "it-length-prefixed";
 import { pipe } from "it-pipe";
-import { pair } from "it-pair";
 import { pushable, Pushable } from "it-pushable";
 import { fromString as uint8ArrayFromString } from "uint8arrays/from-string";
 import { toString as uint8ArrayToString } from "uint8arrays/to-string";
 import type { Connection, Stream } from "@libp2p/interface-connection";
-import { EventEmitter } from "events";
 
 const PROTOCOL = "/libp2p-state-replication/0.0.1";
 
@@ -20,8 +18,6 @@ export class StateReplicator {
 	private node: Libp2p;
 	public dss = new DistributedStateSynchronizer();
 	private writers = new Map<string, Pushable<Uint8Array>>();
-	private emitter = new EventEmitter();
-	private connections = new Set<string>();
 	public rpc = new JSONRPCServerAndClient<string, string>(
 		new JSONRPCServer(),
 		new JSONRPCClient(async (request: object, peerId: string) => {
@@ -30,18 +26,14 @@ export class StateReplicator {
 				throw new Error("peer Id must be specified");
 			}
 
-			//const writer = this.writers.get(peerId);
+			const writer = this.writers.get(peerId);
 
-			this.emitter.emit(peerId, request);
-
-			/*
 			if (!writer) {
 				console.warn("not connected");
 				return;
 			}
 
 			writer.push(uint8ArrayFromString(JSON.stringify(request)));
-			*/
 		})
 	);
 
@@ -100,27 +92,19 @@ export class StateReplicator {
 		});
 
 		// Don't pipe events through the same connection
-		if (this.connections.has(connection.id)) {
+		if (this.writers.has(peerId)) {
 			return;
 		}
 
-		this.connections.add(connection.id);
+		const writer = pushable();
+
+		this.writers.set(peerId, writer);
 
 		// Handle outputs.
 		(async () => {
-			await pipe(async function* () {
-				for (;;) {
-					const message = await new Promise(resolve => that.emitter.once(peerId, resolve));
+			await pipe(writer, lp.encode(), stream);
 
-					if (stream.stat.timeline.close) {
-						return;
-					}
-
-					yield uint8ArrayFromString(JSON.stringify(message));
-				}
-			}, lp.encode(), stream);
-
-			this.connections.delete(connection.id);
+			this.writers.delete(peerId);
 		})();
 	}
 }
