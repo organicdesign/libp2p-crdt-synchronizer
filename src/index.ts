@@ -21,7 +21,6 @@ export class StateReplicator {
 	public rpc = new JSONRPCServerAndClient<string, string>(
 		new JSONRPCServer(),
 		new JSONRPCClient(async (request: object, peerId: string) => {
-			console.log("got ", request);
 			if (peerId == null) {
 				throw new Error("peer Id must be specified");
 			}
