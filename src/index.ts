@@ -81,6 +81,8 @@ export class StateReplicator {
 				const data = JSON.parse(uint8ArrayToString(message.subarray()));
 				await that.rpc.receiveAndSend(data, peerId, peerId);
 			}
+		}).catch(() => {
+			// Do nothing
 		});
 
 		// Don't pipe events through the same connection
@@ -94,9 +96,11 @@ export class StateReplicator {
 
 		// Handle outputs.
 		(async () => {
-			await pipe(writer, lp.encode(), stream);
-
-			this.writers.delete(peerId);
+			try {
+				await pipe(writer, lp.encode(), stream);
+			} finally {
+				this.writers.delete(peerId);
+			}
 		})();
 	}
 }
