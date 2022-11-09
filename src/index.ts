@@ -49,13 +49,6 @@ export class StateReplicator {
 			return blocks;
 		});
 
-		node.connectionManager.addEventListener("peer:connect", async (evt) => {
-			const stream = await node.dialProtocol(evt.detail.remotePeer, PROTOCOL);
-
-			this.handleStream(stream, evt.detail);
-		});
-
-
 		this.node = node;
 	}
 
@@ -64,9 +57,9 @@ export class StateReplicator {
 
 		for (const connection of connections) {
 			// This will throw if the node does not support this proto
-			//const stream = await connection.newStream(PROTOCOL);
+			const stream = await connection.newStream(PROTOCOL);
 
-			//this.handleStream(stream, connection);
+			this.handleStream(stream, connection);
 
 			const { filter } = await this.dss.sync();
 			const blocks = await this.rpc.request(
