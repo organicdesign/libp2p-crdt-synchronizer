@@ -29,9 +29,13 @@
   },
   "dependencies": {
     "distributed-state-synchronizer": "git+ssh://git@code.organicdesign.nz:222/organicdesign/distributed-state-synchronizer.git",
+    "install": "^0.13.0",
     "it-length-prefixed": "^8.0.3",
+    "it-pair": "^2.0.3",
     "it-pipe": "^2.0.4",
     "it-pushable": "^3.1.0",
-    "libp2p": "^0.40.0"
+    "json-rpc-2.0": "^1.4.1",
+    "libp2p": "^0.40.0",
+    "npm": "^8.19.3"
   }
 }
