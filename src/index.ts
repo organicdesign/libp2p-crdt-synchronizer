@@ -32,7 +32,9 @@ export class StateReplicator {
 				return;
 			}
 
-			writer.push(uint8ArrayFromString(JSON.stringify(request)));
+			const asUint8Array = uint8ArrayFromString(JSON.stringify(request));
+
+			writer.push(asUint8Array);
 		})
 	);
 
@@ -66,9 +68,11 @@ export class StateReplicator {
 
 		for (const connection of connections) {
 			// This will throw if the node does not support this protocol
-			const stream = await connection.newStream(PROTOCOL);
+			if (!this.writers.has(connection.remotePeer.toString())) {
+				const stream = await connection.newStream(PROTOCOL);
 
-			this.handleStream(stream, connection);
+				this.handleStream(stream, connection);
+			}
 
 			const filter = await this.dss.generateFilter();
 
