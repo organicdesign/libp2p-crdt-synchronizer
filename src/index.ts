@@ -42,10 +42,20 @@ export class StateReplicator {
 			this.handleStream(stream, connection);
 		});
 
-		this.rpc.addMethod("getBlocks", async (data: { filter: number[] }) => {
-			const { blocks } = await this.dss.sync({ filter: new Uint8Array(data.filter), blocks: [] });
+		this.rpc.addMethod("getBlocks", async (data: {[peerId: string]: string}) => {
+			let blocks: Block[] = [];
+
+			for (const peerId of Object.keys(data)) {
+				const timestamp = data[peerId];
+				const newBlocks = await this.dss.getBlocks(peerId, timestamp);
+				blocks = [...blocks, ...newBlocks];
+			}
 
 			return blocks;
+		});
+
+		this.rpc.addMethod("getTips", async (data: { filter: number[] }) => {
+			return await this.dss.filterTips(new Uint8Array(data.filter));
 		});
 
 		this.node = node;
@@ -55,19 +65,28 @@ export class StateReplicator {
 		const connections = this.node.connectionManager.getConnections();
 
 		for (const connection of connections) {
-			// This will throw if the node does not support this proto
+			// This will throw if the node does not support this protocol
 			const stream = await connection.newStream(PROTOCOL);
 
 			this.handleStream(stream, connection);
 
-			const { filter } = await this.dss.sync();
-			const blocks = await this.rpc.request(
-				"getBlocks",
+			const filter = await this.dss.generateFilter();
+
+			const remoteTips = await this.rpc.request(
+				"getTips",
 				{ filter: Array.from(filter) },
 				connection.remotePeer.toString()
 			);
 
-			await this.dss.sync({ blocks, filter: new Uint8Array() });
+			const tips = await this.dss.getTipDifference(remoteTips);
+
+			const blocks = await this.rpc.request(
+				"getBlocks",
+				tips,
+				connection.remotePeer.toString()
+			);
+
+			await this.dss.putBlocks(blocks);
 		}
 	}
 
