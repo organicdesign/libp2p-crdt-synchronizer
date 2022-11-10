@@ -4,7 +4,7 @@ import {
 	JSONRPCServer
 } from "json-rpc-2.0";
 import type { Libp2p } from "libp2p";
-import { DistributedStateSynchronizer } from "distributed-state-synchronizer";
+import { DistributedStateSynchronizer, Block } from "distributed-state-synchronizer";
 import * as lp from "it-length-prefixed";
 import { pipe } from "it-pipe";
 import { pushable, Pushable } from "it-pushable";
