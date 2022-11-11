@@ -1,10 +1,6 @@
-import {
-	JSONRPCServerAndClient,
-	JSONRPCClient,
-	JSONRPCServer
-} from "json-rpc-2.0";
+import { JSONRPCServerAndClient, JSONRPCClient, JSONRPCServer } from "json-rpc-2.0";
 import type { Libp2p } from "libp2p";
-import { DistributedStateSynchronizer, Block } from "distributed-state-synchronizer";
+import { DistributedStateSynchronizer, Block, Tip } from "distributed-state-synchronizer";
 import * as lp from "it-length-prefixed";
 import { pipe } from "it-pipe";
 import { pushable, Pushable } from "it-pushable";
@@ -15,10 +11,11 @@ import type { Connection, Stream } from "@libp2p/interface-connection";
 const PROTOCOL = "/libp2p-state-replication/0.0.1";
 
 export class StateReplicator {
-	private node: Libp2p;
-	public dss = new DistributedStateSynchronizer();
-	private writers = new Map<string, Pushable<Uint8Array>>();
-	public rpc = new JSONRPCServerAndClient<string, string>(
+	public readonly dss: DistributedStateSynchronizer;
+	private readonly node: Libp2p;
+	private readonly writers = new Map<string, Pushable<Uint8Array>>();
+
+	private readonly rpc = new JSONRPCServerAndClient<string, string>(
 		new JSONRPCServer(),
 		new JSONRPCClient(async (request: object, peerId: string) => {
 			if (peerId == null) {
@@ -40,15 +37,20 @@ export class StateReplicator {
 
 
 	constructor(node: Libp2p) {
+		this.dss  = new DistributedStateSynchronizer({
+			id: node.peerId.toBytes(),
+			format: [4, 8, 4, 42]
+		});
+		this.node = node;
+
 		node.handle(PROTOCOL, async ({ stream, connection }) => {
 			this.handleStream(stream, connection);
 		});
 
-		this.rpc.addMethod("getBlocks", async (data: {[peerId: string]: string}) => {
+		this.rpc.addMethod("getBlocks", async (data: Tip[]) => {
 			let blocks: Block[] = [];
 
-			for (const peerId of Object.keys(data)) {
-				const timestamp = data[peerId];
+			for (const { peerId, timestamp } of data) {
 				const newBlocks = await this.dss.getBlocks(peerId, timestamp);
 				blocks = [...blocks, ...newBlocks];
 			}
@@ -59,16 +61,15 @@ export class StateReplicator {
 		this.rpc.addMethod("getTips", async (data: { filter: number[] }) => {
 			return await this.dss.filterTips(new Uint8Array(data.filter));
 		});
-
-		this.node = node;
 	}
 
 	async requestBlocks () {
 		const connections = this.node.connectionManager.getConnections();
 
 		for (const connection of connections) {
-			// This will throw if the node does not support this protocol
+			// Only open a new stream if we don't already have on open.
 			if (!this.writers.has(connection.remotePeer.toString())) {
+				// This will throw if the node does not support this protocol
 				const stream = await connection.newStream(PROTOCOL);
 
 				this.handleStream(stream, connection);
@@ -76,7 +77,7 @@ export class StateReplicator {
 
 			const filter = await this.dss.generateFilter();
 
-			const remoteTips = await this.rpc.request(
+			const remoteTips: Tip[] = await this.rpc.request(
 				"getTips",
 				{ filter: Array.from(filter) },
 				connection.remotePeer.toString()
