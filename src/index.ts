@@ -50,8 +50,8 @@ export class StateReplicator {
 			this.handleStream(stream, connection);
 		});
 
-		this.rpc.addMethod("getCRDT", async ({ name }: { name: string }) => {
-			return this.crdts.get(name)?.sync();
+		this.rpc.addMethod("syncCRDT", async ({ name, data }: { name: string, data: unknown }) => {
+			return this.crdts.get(name)?.sync(data);
 		});
 	}
 
@@ -70,13 +70,20 @@ export class StateReplicator {
 			for (const name of this.crdts.keys()) {
 				const crdt = this.crdts.get(name);
 
-				const data = await this.rpc.request(
-					"getCRDT",
-					{ name },
-					connection.remotePeer.toString()
-				);
+				let sync = crdt?.sync();
+				while (sync != null) {
+					const data = await this.rpc.request(
+						"syncCRDT",
+						{ name, data: sync },
+						connection.remotePeer.toString()
+					);
 
-				crdt?.sync(data);
+					if (data == null) {
+						break;
+					}
+
+					sync = crdt?.sync(data);
+				}
 			}
 		}
 	}

@@ -1,11 +1,6 @@
-export interface CRDT<T=unknown> {
-	sync (data?: CRDTSync<T>): CRDTSync<T>
+export interface CRDT {
+	sync (data?: unknown): unknown | null
 	toValue(): unknown
-}
-
-export interface CRDTSync<T=unknown> {
-	done: boolean
-	data?: T
 }
 
 /*

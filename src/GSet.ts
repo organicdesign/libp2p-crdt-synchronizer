@@ -1,4 +1,4 @@
-import type { CRDT, CRDTSync } from "./interfaces.js";
+import type { CRDT } from "./interfaces.js";
 
 export class GSet<T=unknown> implements CRDT, Iterable<T> {
 	private added = new Set<T>();
@@ -13,19 +13,16 @@ export class GSet<T=unknown> implements CRDT, Iterable<T> {
 		this.added.add(item);
 	}
 
-	sync (message?: CRDTSync<T[]>): CRDTSync<T[]> {
-		if (message?.data != null) {
-			for (const added of message.data) {
+	sync (data?: T[]): T[] | null {
+		if (data != null) {
+			for (const added of data) {
 				this.add(added);
 			}
 
-			return { done: true };
+			return null;
 		}
 
-		return {
-			done: false,
-			data: [...this.added.values()]
-		};
+		return [...this.added.values()];
 	}
 
 	toValue (): T[] {
