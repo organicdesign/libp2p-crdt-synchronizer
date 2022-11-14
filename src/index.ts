@@ -1,6 +1,5 @@
 import { JSONRPCServerAndClient, JSONRPCClient, JSONRPCServer } from "json-rpc-2.0";
 import type { Libp2p } from "libp2p";
-import { DistributedStateSynchronizer, Block, Tip } from "distributed-state-synchronizer";
 import * as lp from "it-length-prefixed";
 import { pipe } from "it-pipe";
 import { pushable, Pushable } from "it-pushable";
@@ -11,7 +10,6 @@ import type { Connection, Stream } from "@libp2p/interface-connection";
 const PROTOCOL = "/libp2p-state-replication/0.0.1";
 
 export class StateReplicator {
-	public readonly dss: DistributedStateSynchronizer;
 	private readonly node: Libp2p;
 	private readonly writers = new Map<string, Pushable<Uint8Array>>();
 
@@ -37,29 +35,14 @@ export class StateReplicator {
 
 
 	constructor(node: Libp2p) {
-		this.dss  = new DistributedStateSynchronizer({
-			id: node.peerId.toBytes(),
-			format: [4, 8, 4, 42]
-		});
 		this.node = node;
 
 		node.handle(PROTOCOL, async ({ stream, connection }) => {
 			this.handleStream(stream, connection);
 		});
 
-		this.rpc.addMethod("getBlocks", async (data: Tip[]) => {
-			let blocks: Block[] = [];
-
-			for (const { peerId, timestamp } of data) {
-				const newBlocks = await this.dss.getBlocks(peerId, timestamp);
-				blocks = [...blocks, ...newBlocks];
-			}
-
-			return blocks;
-		});
-
-		this.rpc.addMethod("getTips", async (data: { filter: number[] }) => {
-			return await this.dss.filterTips(new Uint8Array(data.filter));
+		this.rpc.addMethod("method", async (data) => {
+			return null;
 		});
 	}
 
@@ -75,23 +58,11 @@ export class StateReplicator {
 				this.handleStream(stream, connection);
 			}
 
-			const filter = await this.dss.generateFilter();
-
-			const remoteTips: Tip[] = await this.rpc.request(
-				"getTips",
-				{ filter: Array.from(filter) },
+			const response = await this.rpc.request(
+				"method",
+				{ data: "data" },
 				connection.remotePeer.toString()
 			);
-
-			const tips = await this.dss.getTipDifference(remoteTips);
-
-			const blocks = await this.rpc.request(
-				"getBlocks",
-				tips,
-				connection.remotePeer.toString()
-			);
-
-			await this.dss.putBlocks(blocks);
 		}
 	}
 
