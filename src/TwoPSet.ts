@@ -5,7 +5,7 @@ export interface Serialized2PSet<T> {
 	removed: T[]
 }
 
-export class TwoPSet<T=unknown> implements CRDT{
+export class TwoPSet<T=unknown> implements CRDT {
 	private added = new Set<T>();
 	private removed = new Set<T>();
 
