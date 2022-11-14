@@ -1,4 +1,4 @@
-export interface ORObject<T> {
+export interface ORSetData<T> {
 	added: T[]
 	removed: T[]
 }
@@ -6,6 +6,12 @@ export interface ORObject<T> {
 export class ORSet<T=unknown> {
 	private added = new Set<T>();
 	private removed = new Set<T>();
+
+	constructor (data?: Iterable<T>) {
+		if (data) {
+			this.added = new Set<T>(data);
+		}
+	}
 
 	remove (item: T): void {
 		this.added.delete(item);
@@ -18,16 +24,16 @@ export class ORSet<T=unknown> {
 		}
 	}
 
-	serialize (): ORObject<T> {
+	serialize (): ORSetData<T> {
 		return {
 			added: [...this.added.values()],
 			removed: [...this.removed.values()]
 		};
 	}
 
-	merge (data: ORObject<T>): void {
-		for (const removed of data.added) {
-			this.remove(removed);
+	merge (data: ORSetData<T>): void {
+		for (const added of data.added) {
+			this.add(added);
 		}
 
 		for (const removed of data.removed) {
