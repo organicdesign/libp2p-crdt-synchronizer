@@ -1,5 +1,6 @@
 import { CRDT } from "./interfaces.js";
 
+// NOTE: this only works if the key maps to the same type of CRDT.
 export class CRDTMap implements CRDT {
 	private data: { [key: string]: CRDT } = {};
 
@@ -11,8 +12,8 @@ export class CRDTMap implements CRDT {
 		return this.data[key];
 	}
 
-	sync (data?) {
-		const response = {};
+	sync (data?: { [key: string]: unknown }) {
+		const response: { [key: string]: unknown } = {};
 
 		if (data == null) {
 			for (const key of Object.keys(this.data)) {
