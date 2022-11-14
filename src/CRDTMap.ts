@@ -12,18 +12,26 @@ export class CRDTMap implements CRDT {
 	}
 
 	sync (data?) {
-		if (data == null) {
-			const data = {};
+		const response = {};
 
+		if (data == null) {
 			for (const key of Object.keys(this.data)) {
-				data[key] = this.data[key].sync();
+				response[key] = this.data[key].sync();
 			}
 
-			return data;
+			return response;
 		}
 
 		for (const key of Object.keys(data)) {
-			this.data[key].sync(data[key]);
+			const subResponse = this.data[key].sync(data[key]);
+
+			if (subResponse != null) {
+				response[key] = subResponse;
+			}
+		}
+
+		if (Object.keys(response).length !== 0) {
+			return response;
 		}
 	}
 }
