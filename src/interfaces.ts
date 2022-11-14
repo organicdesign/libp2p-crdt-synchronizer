@@ -1,7 +1,11 @@
-export interface CRDT {
-	serialize(): unknown
-	merge(data: unknown): void,
+export interface CRDT<T=unknown> {
+	sync (data?: CRDTSync<T>): CRDTSync<T>
 	toValue(): unknown
+}
+
+export interface CRDTSync<T=unknown> {
+	done: boolean
+	data?: T
 }
 
 /*

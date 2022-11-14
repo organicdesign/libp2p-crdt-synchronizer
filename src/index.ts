@@ -51,7 +51,7 @@ export class StateReplicator {
 		});
 
 		this.rpc.addMethod("getCRDT", async ({ name }: { name: string }) => {
-			return this.crdts.get(name)?.serialize();
+			return this.crdts.get(name)?.sync();
 		});
 	}
 
@@ -76,7 +76,7 @@ export class StateReplicator {
 					connection.remotePeer.toString()
 				);
 
-				crdt?.merge(data);
+				crdt?.sync(data);
 			}
 		}
 	}
