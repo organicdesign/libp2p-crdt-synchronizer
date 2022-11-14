@@ -7,6 +7,7 @@ import { fromString as uint8ArrayFromString } from "uint8arrays/from-string";
 import { toString as uint8ArrayToString } from "uint8arrays/to-string";
 import type { Connection, Stream } from "@libp2p/interface-connection";
 import { GSet } from "./GSet.js";
+import { Counter } from "./Counter.js";
 import type { CRDT } from "./interfaces";
 
 const PROTOCOL = "/libp2p-state-replication/0.0.1";
@@ -45,6 +46,9 @@ export class StateReplicator {
 
 		this.crdts.set("test", new GSet<string>([node.peerId.toString()]));
 		this.crdts.set("static", new GSet<string>(["static string"]));
+		const counter = new Counter();
+		counter.increment(Math.random());
+		this.crdts.set("counter", counter);
 
 		node.handle(PROTOCOL, async ({ stream, connection }) => {
 			this.handleStream(stream, connection);
@@ -78,6 +82,7 @@ export class StateReplicator {
 						connection.remotePeer.toString()
 					);
 
+					// Remote does not have any data to provide.
 					if (data == null) {
 						break;
 					}

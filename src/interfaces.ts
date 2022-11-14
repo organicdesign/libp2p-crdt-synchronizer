@@ -1,6 +1,6 @@
 export interface CRDT {
 	sync (data?: unknown): unknown | null
-	toValue(): unknown
+	//toValue(): unknown
 }
 
 /*
