@@ -7,11 +7,12 @@ import { fromString as uint8ArrayFromString } from "uint8arrays/from-string";
 import { toString as uint8ArrayToString } from "uint8arrays/to-string";
 import type { Connection, Stream } from "@libp2p/interface-connection";
 import { GSet } from "./GSet.js";
+import type { CRDT } from "./interfaces";
 
 const PROTOCOL = "/libp2p-state-replication/0.0.1";
 
 export class StateReplicator {
-	private readonly rootSet = new GSet<string>();
+	private readonly crdts = new Map<string, CRDT>();
 	private readonly node: Libp2p;
 	private readonly writers = new Map<string, Pushable<Uint8Array>>();
 
@@ -35,18 +36,22 @@ export class StateReplicator {
 		})
 	);
 
+	get CRDTNames(): string[] {
+		return [...this.crdts.keys()];
+	}
 
 	constructor(node: Libp2p) {
 		this.node = node;
+
+		this.crdts.set("test", new GSet<string>([node.peerId.toString()]));
+		this.crdts.set("static", new GSet<string>(["static string"]));
 
 		node.handle(PROTOCOL, async ({ stream, connection }) => {
 			this.handleStream(stream, connection);
 		});
 
-		this.rpc.addMethod("getCRDT", async (data: { key?: string }) => {
-			if (!data.key) {
-				return this.rootSet.serialize();
-			}
+		this.rpc.addMethod("getCRDT", async ({ name }: { name: string }) => {
+			return this.crdts.get(name)?.serialize();
 		});
 	}
 
@@ -62,24 +67,22 @@ export class StateReplicator {
 				this.handleStream(stream, connection);
 			}
 
-			const rootSet = await this.rpc.request(
-				"getCRDT",
-				{},
-				connection.remotePeer.toString()
-			);
+			for (const name of this.crdts.keys()) {
+				const crdt = this.crdts.get(name);
 
-			this.rootSet.merge(rootSet);
+				const data = await this.rpc.request(
+					"getCRDT",
+					{ name },
+					connection.remotePeer.toString()
+				);
+
+				crdt?.merge(data);
+			}
 		}
 	}
 
-	addCRDT (name: string) {
-		this.rootSet.add(name);
-	}
-
-	getCRDTValue (name?: string) {
-		if (!name) {
-			return this.rootSet.values();
-		}
+	getCRDT (name: string): CRDT | undefined {
+		return this.crdts.get(name);
 	}
 
 	private handleStream (stream: Stream, connection: Connection) {

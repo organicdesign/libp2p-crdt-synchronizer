@@ -4,11 +4,6 @@ export interface CRDT {
 	toValue(): unknown
 }
 
-export interface NamedCRDT {
-	name: string,
-	crdt: CRDT
-}
-
 /*
 	end-appplications create their own interface for the crdts
 
