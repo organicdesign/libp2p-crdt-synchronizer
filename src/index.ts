@@ -10,6 +10,7 @@ import { GSet } from "./GSet.js";
 import { Counter } from "./Counter.js";
 import { TwoPSet } from "./TwoPSet.js";
 import { CRDTMap } from "./CRDTMap.js";
+import { LWWMap } from "./LWWMap.js";
 import type { CRDT } from "./interfaces";
 
 const PROTOCOL = "/libp2p-state-replication/0.0.1";
@@ -53,9 +54,11 @@ export class StateReplicator {
 		this.crdts.set("counter", counter);
 		this.crdts.set("2pSet", new TwoPSet(["static string"]));
 		const crdtMap = new CRDTMap();
-
 		crdtMap.set("a-set", new GSet([node.peerId.toString()]));
 		this.crdts.set("CRDTMap", crdtMap);
+		const lwwMap = new LWWMap();
+		lwwMap.set("test", node.peerId.toString());
+		this.crdts.set("LWWMap", lwwMap);
 
 		node.handle(PROTOCOL, async ({ stream, connection }) => {
 			this.handleStream(stream, connection);
