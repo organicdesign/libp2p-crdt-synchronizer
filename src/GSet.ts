@@ -1,6 +1,6 @@
 import type { CRDT, CRDTSync } from "./interfaces.js";
 
-export class GSet<T=unknown> implements CRDT {
+export class GSet<T=unknown> implements CRDT, Iterable<T> {
 	private added = new Set<T>();
 
 	constructor (data?: Iterable<T>) {
@@ -30,5 +30,9 @@ export class GSet<T=unknown> implements CRDT {
 
 	toValue (): T[] {
 		return [...this.added.values()];
+	}
+
+	[Symbol.iterator] () {
+		return this.added[Symbol.iterator]();
 	}
 }
