@@ -43,7 +43,7 @@ export class TwoPSet<T=unknown> implements CRDT{
 		}
 	}
 
-	toValue (): T[] {
+	values (): T[] {
 		return [...this.added.values()];
 	}
 }
