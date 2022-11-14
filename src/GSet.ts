@@ -1,4 +1,6 @@
-export class GSet<T=unknown> {
+import type { CRDT } from "./interfaces.js";
+
+export class GSet<T=unknown> implements CRDT {
 	private added = new Set<T>();
 
 	constructor (data?: Iterable<T>) {
@@ -21,7 +23,7 @@ export class GSet<T=unknown> {
 		}
 	}
 
-	values (): T[] {
+	toValue (): T[] {
 		return [...this.added.values()];
 	}
 }

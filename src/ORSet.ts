@@ -1,9 +1,11 @@
-export interface ORSetData<T> {
+import type { CRDT } from "./interfaces.js";
+
+export interface SerializedORSet<T> {
 	added: T[]
 	removed: T[]
 }
 
-export class ORSet<T=unknown> {
+export class ORSet<T=unknown> implements CRDT{
 	private added = new Set<T>();
 	private removed = new Set<T>();
 
@@ -24,14 +26,14 @@ export class ORSet<T=unknown> {
 		}
 	}
 
-	serialize (): ORSetData<T> {
+	serialize (): SerializedORSet<T> {
 		return {
 			added: [...this.added.values()],
 			removed: [...this.removed.values()]
 		};
 	}
 
-	merge (data: ORSetData<T>): void {
+	merge (data: SerializedORSet<T>): void {
 		for (const added of data.added) {
 			this.add(added);
 		}
@@ -41,7 +43,7 @@ export class ORSet<T=unknown> {
 		}
 	}
 
-	values (): T[] {
+	toValue (): T[] {
 		return [...this.added.values()];
 	}
 }
