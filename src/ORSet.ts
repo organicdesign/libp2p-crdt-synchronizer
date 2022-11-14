@@ -40,4 +40,8 @@ export class ORSet<T=unknown> {
 			this.remove(removed);
 		}
 	}
+
+	values (): T[] {
+		return [...this.added.values()];
+	}
 }

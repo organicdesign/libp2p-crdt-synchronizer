@@ -20,4 +20,8 @@ export class GSet<T=unknown> {
 			this.add(added);
 		}
 	}
+
+	values (): T[] {
+		return [...this.added.values()];
+	}
 }

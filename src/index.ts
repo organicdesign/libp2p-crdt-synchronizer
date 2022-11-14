@@ -6,10 +6,12 @@ import { pushable, Pushable } from "it-pushable";
 import { fromString as uint8ArrayFromString } from "uint8arrays/from-string";
 import { toString as uint8ArrayToString } from "uint8arrays/to-string";
 import type { Connection, Stream } from "@libp2p/interface-connection";
+import { GSet } from "./GSet.js";
 
 const PROTOCOL = "/libp2p-state-replication/0.0.1";
 
 export class StateReplicator {
+	private readonly rootSet = new GSet<string>();
 	private readonly node: Libp2p;
 	private readonly writers = new Map<string, Pushable<Uint8Array>>();
 
@@ -41,8 +43,10 @@ export class StateReplicator {
 			this.handleStream(stream, connection);
 		});
 
-		this.rpc.addMethod("method", async (data) => {
-			return null;
+		this.rpc.addMethod("getCRDT", async (data: { key?: string }) => {
+			if (!data.key) {
+				return this.rootSet.serialize();
+			}
 		});
 	}
 
@@ -58,15 +62,27 @@ export class StateReplicator {
 				this.handleStream(stream, connection);
 			}
 
-			const response = await this.rpc.request(
-				"method",
-				{ data: "data" },
+			const rootSet = await this.rpc.request(
+				"getCRDT",
+				{},
 				connection.remotePeer.toString()
 			);
+
+			this.rootSet.merge(rootSet);
 		}
 	}
 
-	handleStream (stream: Stream, connection: Connection) {
+	addCRDT (name: string) {
+		this.rootSet.add(name);
+	}
+
+	getCRDTValue (name?: string) {
+		if (!name) {
+			return this.rootSet.values();
+		}
+	}
+
+	private handleStream (stream: Stream, connection: Connection) {
 		const that = this;
 		const peerId = connection.remotePeer.toString();
 
