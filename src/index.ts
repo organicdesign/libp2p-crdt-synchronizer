@@ -8,6 +8,7 @@ import { toString as uint8ArrayToString } from "uint8arrays/to-string";
 import type { Connection, Stream } from "@libp2p/interface-connection";
 import { GSet } from "./GSet.js";
 import { Counter } from "./Counter.js";
+import { TwoPSet } from "./TwoPSet.js";
 import type { CRDT } from "./interfaces";
 
 const PROTOCOL = "/libp2p-state-replication/0.0.1";
@@ -49,6 +50,7 @@ export class StateReplicator {
 		const counter = new Counter();
 		counter.increment(Math.random());
 		this.crdts.set("counter", counter);
+		this.crdts.set("2pSet", new TwoPSet(["static string"]));
 
 		node.handle(PROTOCOL, async ({ stream, connection }) => {
 			this.handleStream(stream, connection);

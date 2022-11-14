@@ -26,14 +26,14 @@ export class TwoPSet<T=unknown> implements CRDT{
 		}
 	}
 
-	serialize (): Serialized2PSet<T> {
-		return {
-			added: [...this.added.values()],
-			removed: [...this.removed.values()]
-		};
-	}
+	sync (data?: Serialized2PSet<T>) {
+		if (!data) {
+			return {
+				added: [...this.added.values()],
+				removed: [...this.removed.values()]
+			};
+		}
 
-	merge (data: Serialized2PSet<T>): void {
 		for (const added of data.added) {
 			this.add(added);
 		}
