@@ -11,6 +11,7 @@ import { Counter } from "./Counter.js";
 import { TwoPSet } from "./TwoPSet.js";
 import { CRDTMap } from "./CRDTMap.js";
 import { LWWMap } from "./LWWMap.js";
+import { Table } from "./Table.js";
 import type { CRDT } from "./interfaces";
 
 const PROTOCOL = "/libp2p-state-replication/0.0.1";
@@ -47,18 +48,32 @@ export class StateReplicator {
 	constructor(node: Libp2p) {
 		this.node = node;
 
+		/*
 		this.crdts.set("test", new GSet<string>([node.peerId.toString()]));
 		this.crdts.set("static", new GSet<string>(["static string"]));
 		const counter = new Counter();
 		counter.increment(Math.random());
 		this.crdts.set("counter", counter);
 		this.crdts.set("2pSet", new TwoPSet(["static string"]));
+		*/
+
+		/*
 		const crdtMap = new CRDTMap();
 		crdtMap.set("a-set", new GSet([node.peerId.toString()]));
 		this.crdts.set("CRDTMap", crdtMap);
+		*/
+
+		/*
 		const lwwMap = new LWWMap();
 		lwwMap.set("test", node.peerId.toString());
 		this.crdts.set("LWWMap", lwwMap);
+		*/
+
+		const table = new Table();
+		table.create("test", { column1: "value1", column2: 23 });
+		table.create("test2", { column1: node.peerId.toString(), column2: 1 });
+		table.create(node.peerId.toString(), { unrelated: false });
+		this.crdts.set("table", table);
 
 		node.handle(PROTOCOL, async ({ stream, connection }) => {
 			this.handleStream(stream, connection);

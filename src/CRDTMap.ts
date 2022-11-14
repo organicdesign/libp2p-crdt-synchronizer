@@ -12,7 +12,7 @@ export class CRDTMap implements CRDT {
 		return this.data[key];
 	}
 
-	sync (data?: { [key: string]: unknown }) {
+	sync (data?: { [key: string]: unknown }, obj?) {
 		const response: { [key: string]: unknown } = {};
 
 		if (data == null) {
@@ -24,6 +24,15 @@ export class CRDTMap implements CRDT {
 		}
 
 		for (const key of Object.keys(data)) {
+			if (!this.data[key]) {
+				// We have no Idea what this data type is...
+				if (!obj) {
+					continue;
+				}
+
+				this.data[key] = new obj;
+			}
+
 			const subResponse = this.data[key].sync(data[key]);
 
 			if (subResponse != null) {
