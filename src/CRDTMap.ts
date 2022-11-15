@@ -1,9 +1,14 @@
-import { CRDT } from "./interfaces.js";
+import { CRDT, CRDTConstuctor } from "./interfaces.js";
 
 // NOTE: this only works if the key maps to the same type of CRDT.
 export class CRDTMap implements CRDT {
 	public readonly protocol = "/map/crdt";
 	private data: { [key: string]: CRDT } = {};
+	private readonly resolver: CRDTConstuctor;
+
+	constructor (resolver: CRDTConstuctor) {
+		this.resolver = resolver;
+	}
 
 	get value () {
 		const output = {};
@@ -37,8 +42,14 @@ export class CRDTMap implements CRDT {
 		for (const key of Object.keys(data)) {
 			if (!this.data[key] || this.data[key].protocol < data[key].protocol) {
 				// Need to overwrite the local datatype with the remote...
-				console.warn("dynamic datatype not yet supported");
-				continue;
+				const crdt = this.resolver(data[key].protocol);
+
+				if (!crdt) {
+					console.warn(`Could not resolve CRDT ${data[key].protocol}`);
+					continue;
+				}
+
+				this.data[key] = crdt;
 			}
 
 			if (this.data[key].protocol > data[key].protocol) {

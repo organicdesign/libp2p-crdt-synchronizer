@@ -12,12 +12,13 @@ import { TwoPSet } from "./TwoPSet.js";
 import { CRDTMap } from "./CRDTMap.js";
 import { LWWMap } from "./LWWMap.js";
 import { Table } from "./Table.js";
-import type { CRDT } from "./interfaces";
+import type { CRDT, CRDTConstuctor } from "./interfaces";
 
 const PROTOCOL = "/libp2p-state-replication/0.0.1";
 
 export class StateReplicator {
 	private readonly crdts = new Map<string, CRDT>();
+	private readonly crdtConstrucotrs = new Map<string, CRDTConstuctor>();
 	private readonly node: Libp2p;
 	private readonly writers = new Map<string, Pushable<Uint8Array>>();
 
@@ -45,8 +46,16 @@ export class StateReplicator {
 		return [...this.crdts.keys()];
 	}
 
-	constructor({ libp2p }: { libp2p: Libp2p }) {
+	get createCRDT() {
+		return (protocol: string) => this.crdtConstrucotrs.get(protocol)?.();
+	}
+
+	constructor({ libp2p, crdts }: { libp2p: Libp2p, crdts: new (...args: any[]) => CRDT }) {
 		this.node = libp2p;
+
+		this.crdtConstrucotrs.set("/set/g", () => new GSet());
+		this.crdtConstrucotrs.set("/map/crdt", () => new CRDTMap(this.createCRDT));
+		this.crdtConstrucotrs.set("/map/lww", () => new LWWMap());
 
 		/*
 		this.crdts.set("test", new GSet<string>([node.peerId.toString()]));
@@ -69,7 +78,7 @@ export class StateReplicator {
 		this.crdts.set("LWWMap", lwwMap);
 		*/
 
-		const table = new Table();
+		const table = new Table(this.createCRDT);
 		table.create("test", { column1: "value1", column2: 23 });
 		table.create("test2", { column1: libp2p.peerId.toString(), column2: 1 });
 		table.create(libp2p.peerId.toString(), { unrelated: false });
@@ -126,6 +135,10 @@ export class StateReplicator {
 
 	getCRDT (name: string): CRDT | undefined {
 		return this.crdts.get(name);
+	}
+
+	handle (protocol: string, crdtConstuctor: CRDTConstuctor) {
+		this.crdtConstrucotrs.set(protocol, crdtConstuctor);
 	}
 
 	private handleStream (stream: Stream, connection: Connection) {

@@ -4,6 +4,8 @@ export interface CRDT {
 	value: unknown
 }
 
+export type CRDTConstuctor = (...args: any[]) => CRDT | null | undefined;
+
 /*
 	end-appplications create their own interface for the crdts
 
