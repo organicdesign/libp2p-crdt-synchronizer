@@ -31,7 +31,7 @@ export class Table implements CRDT {
 			map.set(key, data[key]);
 		}
 
-		this.rows.set(id, map);
+		this.rows.set(id, map, "/map/lww");
 	}
 
 	sync (data?) {

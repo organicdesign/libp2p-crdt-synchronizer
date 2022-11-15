@@ -79,36 +79,36 @@ export class StateReplicator {
 		const gset = this.createCRDT("/set/g") as GSet;
 		gset.add(libp2p.peerId.toString());
 		gset.add("static string");
-		this.root.set("gset", gset);
+		this.root.set("gset", gset, "/set/g");
 
 		// Counter
 		const counter = this.createCRDT("/counter/pn") as Counter;
 		counter.increment(Math.random());
-		this.root.set("counter", counter);
+		this.root.set("counter", counter, "/counter/pn");
 
 		// 2P Set
 		const twoPSet = this.createCRDT("/set/2p") as TwoPSet;
 		twoPSet.add("static string");
-		this.root.set("2pSet", twoPSet);
+		this.root.set("2pSet", twoPSet, "/set/2p");
 
 		// CRDT Map
 		const crdtMap = this.createCRDT("/map/crdt") as CRDTMap;
 		const subSet = this.createCRDT("/set/g") as GSet;
 		subSet.add(libp2p.peerId.toString());
-		crdtMap.set("a-set", subSet);
-		this.root.set("CRDTMap", crdtMap);
+		crdtMap.set("a-set", subSet, "/set/g");
+		this.root.set("CRDTMap", crdtMap, "/map/crdt");
 
 		// LWW Map
 		const lwwMap = this.createCRDT("/map/lww") as LWWMap;
 		lwwMap.set("test", libp2p.peerId.toString());
-		this.root.set("LWWMap", lwwMap);
+		this.root.set("LWWMap", lwwMap, "/map/lww");
 
 		// Table
 		const table = this.createCRDT("/map/table") as Table;
 		table.create("test", { column1: "value1", column2: 23 });
 		table.create("test2", { column1: libp2p.peerId.toString(), column2: 1 });
 		table.create(libp2p.peerId.toString(), { unrelated: false });
-		this.root.set("table", table);
+		this.root.set("table", table, "/map/table");
 
 		libp2p.handle(PROTOCOL, async ({ stream, connection }) => {
 			this.handleStream(stream, connection);

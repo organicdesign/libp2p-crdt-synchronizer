@@ -1,9 +1,9 @@
-import { CRDT, CRDTConfig, CRDTResolver } from "./interfaces.js";
+import { CRDT, CRDTConfig, CRDTResolver, CRDTWrapper } from "./interfaces.js";
 
 // NOTE: this only works if the key maps to the same type of CRDT.
 export class CRDTMap implements CRDT {
 	public readonly protocol: string;
-	private data: { [key: string]: CRDT } = {};
+	private data: { [key: string]: CRDTWrapper } = {};
 	private readonly resolver: CRDTResolver;
 
 	constructor ({ resolver, protocol }: CRDTConfig) {
@@ -15,18 +15,18 @@ export class CRDTMap implements CRDT {
 		const output = {};
 
 		for (const key of Object.keys(this.data)) {
-			output[key] = this.data[key].value;
+			output[key] = this.data[key].crdt.value;
 		}
 
 		return output;
 	}
 
-	set (key: string, value: CRDT) {
-		this.data[key] = value;
+	set (key: string, value: CRDT, protocol: string) {
+		this.data[key] = { crdt: value, protocol };
 	}
 
-	get (key: string) {
-		return this.data[key];
+	get (key: string): CRDT {
+		return this.data[key]?.crdt;
 	}
 
 	keys () {
@@ -38,7 +38,7 @@ export class CRDTMap implements CRDT {
 
 		if (data == null) {
 			for (const key of Object.keys(this.data)) {
-				response[key] = { sync: this.data[key].sync(), protocol: this.data[key].protocol };
+				response[key] = { sync: this.data[key].crdt.sync(), protocol: this.data[key].protocol };
 			}
 
 			return response;
@@ -54,14 +54,14 @@ export class CRDTMap implements CRDT {
 					continue;
 				}
 
-				this.data[key] = crdt;
+				this.data[key] = { crdt, protocol: data[key].protocol };
 			}
 
 			if (this.data[key].protocol > data[key].protocol) {
 				continue;
 			}
 
-			const subResponse = this.data[key].sync(data[key].sync);
+			const subResponse = this.data[key].crdt.sync(data[key].sync);
 
 			if (subResponse != null) {
 				response[key] = { sync: subResponse, protocol: this.data[key].protocol };

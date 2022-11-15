@@ -12,6 +12,11 @@ export interface CRDTConfig {
 
 export type CRDTResolver = (protocol: string) => CRDT;
 
+export interface CRDTWrapper {
+	crdt: CRDT
+	protocol: string
+}
+
 /*
 	end-appplications create their own interface for the crdts
 
