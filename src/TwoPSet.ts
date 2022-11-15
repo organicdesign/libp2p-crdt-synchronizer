@@ -6,6 +6,7 @@ export interface Serialized2PSet<T> {
 }
 
 export class TwoPSet<T=unknown> implements CRDT {
+	public readonly protocol = "/set/2p";
 	private added = new Set<T>();
 	private removed = new Set<T>();
 

@@ -1,6 +1,7 @@
 import type { CRDT } from "./interfaces.js";
 
 export class GSet<T=unknown> implements CRDT, Iterable<T> {
+	public readonly protocol = "/set/g";
 	private added = new Set<T>();
 
 	constructor (data?: Iterable<T>) {

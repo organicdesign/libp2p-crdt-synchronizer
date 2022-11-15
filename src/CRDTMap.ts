@@ -2,6 +2,7 @@ import { CRDT } from "./interfaces.js";
 
 // NOTE: this only works if the key maps to the same type of CRDT.
 export class CRDTMap implements CRDT {
+	public readonly protocol = "/map/crdt";
 	private data: { [key: string]: CRDT } = {};
 
 	get value () {

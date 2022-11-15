@@ -6,6 +6,7 @@ interface Operation {
 }
 
 export class Counter implements CRDT {
+	public readonly protocol = "/counter/pn";
 	private cachedValue = 0;
 	private operations: Operation[] = [];
 	private ids = new Set<number>();

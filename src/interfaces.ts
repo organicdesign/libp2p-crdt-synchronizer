@@ -1,5 +1,6 @@
 export interface CRDT {
 	sync (data?: unknown): unknown | null
+	protocol: string
 	value: unknown
 }
 

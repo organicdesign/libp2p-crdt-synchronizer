@@ -1,6 +1,7 @@
 import { CRDT } from "./interfaces.js";
 
 export class LWWMap implements CRDT {
+	public readonly protocol = "/map/lww";
 	private data: { [key: string]: unknown } = {};
 	private timestamps: { [key: string]: string } = {};
 

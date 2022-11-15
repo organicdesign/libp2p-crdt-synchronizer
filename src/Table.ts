@@ -3,6 +3,7 @@ import { CRDTMap } from "./CRDTMap.js";
 import { LWWMap } from "./LWWMap.js";
 
 export class Table implements CRDT {
+	public readonly protocol = "/map/table";
 	private rows = new CRDTMap();
 
 	get value () {
