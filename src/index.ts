@@ -45,8 +45,8 @@ export class StateReplicator {
 		return [...this.crdts.keys()];
 	}
 
-	constructor(node: Libp2p) {
-		this.node = node;
+	constructor({ libp2p }: { libp2p: Libp2p }) {
+		this.node = libp2p;
 
 		/*
 		this.crdts.set("test", new GSet<string>([node.peerId.toString()]));
@@ -71,11 +71,11 @@ export class StateReplicator {
 
 		const table = new Table();
 		table.create("test", { column1: "value1", column2: 23 });
-		table.create("test2", { column1: node.peerId.toString(), column2: 1 });
-		table.create(node.peerId.toString(), { unrelated: false });
+		table.create("test2", { column1: libp2p.peerId.toString(), column2: 1 });
+		table.create(libp2p.peerId.toString(), { unrelated: false });
 		this.crdts.set("table", table);
 
-		node.handle(PROTOCOL, async ({ stream, connection }) => {
+		libp2p.handle(PROTOCOL, async ({ stream, connection }) => {
 			this.handleStream(stream, connection);
 		});
 
