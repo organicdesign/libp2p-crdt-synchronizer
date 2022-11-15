@@ -79,8 +79,14 @@ export class StateReplicator {
 			this.handleStream(stream, connection);
 		});
 
-		this.rpc.addMethod("syncCRDT", async ({ name, data }: { name: string, data: unknown }) => {
-			return this.crdts.get(name)?.sync(data);
+		this.rpc.addMethod("syncCRDT", async ({ name, data, protocol }: { name: string, data: unknown, protocol: string }) => {
+			const crdt = this.crdts.get(name);
+
+			if (crdt?.protocol !== protocol) {
+				return;
+			}
+
+			return crdt?.sync(data);
 		});
 	}
 
@@ -103,7 +109,7 @@ export class StateReplicator {
 				while (sync != null) {
 					const data = await this.rpc.request(
 						"syncCRDT",
-						{ name, data: sync },
+						{ name, data: sync, protocol: crdt?.protocol },
 						connection.remotePeer.toString()
 					);
 
