@@ -6,7 +6,8 @@ export interface CRDT {
 
 export interface CRDTConfig {
 	resolver: (protocol: string) => CRDT
-	id: string
+	id: string,
+	protocol: string
 }
 
 export type CRDTResolver = (protocol: string) => CRDT;
