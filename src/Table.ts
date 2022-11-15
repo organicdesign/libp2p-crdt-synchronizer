@@ -1,13 +1,15 @@
-import type { CRDT, CRDTConstuctor } from "./interfaces.js";
-import { CRDTMap } from "./CRDTMap.js";
-import { LWWMap } from "./LWWMap.js";
+import type { CRDT, CRDTConfig } from "./interfaces.js";
+import type { CRDTMap } from "./CRDTMap.js";
+import type { LWWMap } from "./LWWMap.js";
 
 export class Table implements CRDT {
 	public readonly protocol = "/map/table";
 	private readonly rows: CRDTMap;
+	private readonly resolver: (protocol: string) => CRDT;
 
-	constructor (resolver: CRDTConstuctor) {
-		this.rows = new CRDTMap(resolver);
+	constructor ({ resolver }: CRDTConfig) {
+		this.rows = resolver("/map/crdt") as CRDTMap;
+		this.resolver = resolver;
 	}
 
 	get value () {
@@ -22,7 +24,7 @@ export class Table implements CRDT {
 			throw new Error("row already exists");
 		}
 
-		const map = new LWWMap();
+		const map = this.resolver("/map/lww") as LWWMap;
 
 		for (const key of Object.keys(data)) {
 			map.set(key, data[key]);

@@ -4,12 +4,6 @@ export class GSet<T=unknown> implements CRDT, Iterable<T> {
 	public readonly protocol = "/set/g";
 	private added = new Set<T>();
 
-	constructor (data?: Iterable<T>) {
-		if (data) {
-			this.added = new Set<T>(data);
-		}
-	}
-
 	add (item: T): void {
 		this.added.add(item);
 	}

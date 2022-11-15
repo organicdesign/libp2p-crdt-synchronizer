@@ -4,7 +4,12 @@ export interface CRDT {
 	value: unknown
 }
 
-export type CRDTConstuctor = (...args: any[]) => CRDT | null | undefined;
+export interface CRDTConfig {
+	resolver: (protocol: string) => CRDT
+	id: string
+}
+
+export type CRDTConstuctor = (config?: CRDTConfig) => CRDT;
 
 /*
 	end-appplications create their own interface for the crdts

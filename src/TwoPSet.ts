@@ -10,12 +10,6 @@ export class TwoPSet<T=unknown> implements CRDT {
 	private added = new Set<T>();
 	private removed = new Set<T>();
 
-	constructor (data?: Iterable<T>) {
-		if (data) {
-			this.added = new Set<T>(data);
-		}
-	}
-
 	remove (item: T): void {
 		this.added.delete(item);
 		this.removed.add(item);

@@ -12,14 +12,13 @@ import { TwoPSet } from "./TwoPSet.js";
 import { CRDTMap } from "./CRDTMap.js";
 import { LWWMap } from "./LWWMap.js";
 import { Table } from "./Table.js";
-import type { CRDT, CRDTConstuctor } from "./interfaces";
+import type { CRDT, CRDTConfig } from "./interfaces";
 
 const PROTOCOL = "/libp2p-state-replication/0.0.1";
 
 export class StateReplicator {
 	private readonly root: CRDTMap;
-	private readonly crdts = new Map<string, CRDT>();
-	private readonly crdtConstrucotrs = new Map<string, CRDTConstuctor>();
+	private readonly crdtConstrucotrs = new Map<string, () => CRDT>();
 	private readonly node: Libp2p;
 	private readonly writers = new Map<string, Pushable<Uint8Array>>();
 
@@ -48,17 +47,26 @@ export class StateReplicator {
 	}
 
 	get createCRDT() {
-		return (protocol: string) => this.crdtConstrucotrs.get(protocol)?.();
+		return (protocol: string) => {
+			const crdtConstuctor = this.crdtConstrucotrs.get(protocol);
+
+			if (crdtConstuctor == null) {
+				throw new Error(`missing constructor for protocol: ${protocol}`);
+			}
+
+			return crdtConstuctor();
+		};
 	}
 
 	constructor({ libp2p }: { libp2p: Libp2p }) {
 		this.node = libp2p;
 
-		this.root = new CRDTMap(this.createCRDT);
+		this.handle("/set/g", (c: CRDTConfig) => new GSet());
+		this.handle("/map/crdt", (c: CRDTConfig) => new CRDTMap(c));
+		this.handle("/map/lww", (c: CRDTConfig) => new LWWMap());
+		this.handle("/map/table", (c: CRDTConfig) => new Table(c));
 
-		this.handle("/set/g", () => new GSet());
-		this.handle("/map/crdt", () => new CRDTMap(this.createCRDT));
-		this.handle("/map/lww", () => new LWWMap());
+		this.root = this.createCRDT("/map/crdt") as CRDTMap;
 
 		/*
 		this.crdts.set("test", new GSet<string>([node.peerId.toString()]));
@@ -81,7 +89,7 @@ export class StateReplicator {
 		this.crdts.set("LWWMap", lwwMap);
 		*/
 
-		const table = new Table(this.createCRDT);
+		const table = this.createCRDT("/map/table") as Table;
 		table.create("test", { column1: "value1", column2: 23 });
 		table.create("test2", { column1: libp2p.peerId.toString(), column2: 1 });
 		table.create(libp2p.peerId.toString(), { unrelated: false });
@@ -91,8 +99,8 @@ export class StateReplicator {
 			this.handleStream(stream, connection);
 		});
 
-		this.rpc.addMethod("syncCRDT", async ({ data }: { data: unknown }) => {
-			return this.root.sync(data as any);
+		this.rpc.addMethod("syncCRDT", async ({ data }: { data: any }) => {
+			return this.root.sync(data);
 		});
 	}
 
@@ -134,8 +142,11 @@ export class StateReplicator {
 		return this.root.get(name);
 	}
 
-	handle (protocol: string, crdtConstuctor: CRDTConstuctor) {
-		this.crdtConstrucotrs.set(protocol, crdtConstuctor);
+	handle (protocol: string, crdtConstuctor: (config?: CRDTConfig) => CRDT) {
+		this.crdtConstrucotrs.set(protocol, () => crdtConstuctor({
+			resolver: this.createCRDT,
+			id: this.node.peerId.toString()
+		}));
 	}
 
 	private handleStream (stream: Stream, connection: Connection) {
