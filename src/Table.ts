@@ -3,14 +3,12 @@ import type { CRDTMap } from "./CRDTMap.js";
 import type { LWWMap } from "./LWWMap.js";
 
 export class Table implements CRDT {
-	public readonly protocol: string;
 	private readonly rows: CRDTMap;
 	private readonly resolver: CRDTResolver;
 
-	constructor ({ resolver, protocol }: CRDTConfig) {
+	constructor ({ resolver }: CRDTConfig) {
 		this.rows = resolver("/map/crdt") as CRDTMap;
 		this.resolver = resolver;
-		this.protocol = protocol;
 	}
 
 	get value () {

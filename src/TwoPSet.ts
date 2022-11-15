@@ -1,4 +1,4 @@
-import type { CRDT, CRDTConfig } from "./interfaces.js";
+import type { CRDT } from "./interfaces.js";
 
 export interface Serialized2PSet<T> {
 	added: T[]
@@ -6,13 +6,8 @@ export interface Serialized2PSet<T> {
 }
 
 export class TwoPSet<T=unknown> implements CRDT {
-	public readonly protocol: string;
 	private added = new Set<T>();
 	private removed = new Set<T>();
-
-	constructor ({ protocol }: CRDTConfig) {
-		this.protocol = protocol;
-	}
 
 	remove (item: T): void {
 		this.added.delete(item);

@@ -2,13 +2,11 @@ import { CRDT, CRDTConfig, CRDTResolver, CRDTWrapper } from "./interfaces.js";
 
 // NOTE: this only works if the key maps to the same type of CRDT.
 export class CRDTMap implements CRDT {
-	public readonly protocol: string;
 	private data: { [key: string]: CRDTWrapper } = {};
 	private readonly resolver: CRDTResolver;
 
-	constructor ({ resolver, protocol }: CRDTConfig) {
+	constructor ({ resolver }: CRDTConfig) {
 		this.resolver = resolver;
-		this.protocol = protocol;
 	}
 
 	get value () {

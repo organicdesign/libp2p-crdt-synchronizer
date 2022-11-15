@@ -1,12 +1,7 @@
-import type { CRDT, CRDTConfig } from "./interfaces.js";
+import type { CRDT } from "./interfaces.js";
 
 export class GSet<T=unknown> implements CRDT, Iterable<T> {
-	public readonly protocol: string;
 	private added = new Set<T>();
-
-	constructor ({ protocol }: CRDTConfig) {
-		this.protocol = protocol;
-	}
 
 	add (item: T): void {
 		this.added.add(item);

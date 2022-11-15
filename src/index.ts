@@ -66,11 +66,11 @@ export class StateReplicator {
 		this.node = libp2p;
 
 		// Types will not replicate if you do not handle.
-		this.handle("/counter/pn", (c: CRDTConfig) => new Counter(c));
-		this.handle("/set/g", (c: CRDTConfig) => new GSet(c));
-		this.handle("/set/2p", (c: CRDTConfig) => new TwoPSet(c));
+		this.handle("/counter/pn", () => new Counter());
+		this.handle("/set/g", () => new GSet());
+		this.handle("/set/2p", () => new TwoPSet());
 		this.handle("/map/crdt", (c: CRDTConfig) => new CRDTMap(c));
-		this.handle("/map/lww", (c: CRDTConfig) => new LWWMap(c));
+		this.handle("/map/lww", () => new LWWMap());
 		this.handle("/map/table", (c: CRDTConfig) => new Table(c));
 
 		this.root = this.createCRDT("/map/crdt") as CRDTMap;

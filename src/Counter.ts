@@ -1,4 +1,4 @@
-import type { CRDT, CRDTConfig } from "./interfaces.js";
+import type { CRDT } from "./interfaces.js";
 
 interface Operation {
 	value: number
@@ -6,14 +6,9 @@ interface Operation {
 }
 
 export class Counter implements CRDT {
-	public readonly protocol: string;
 	private cachedValue = 0;
 	private operations: Operation[] = [];
 	private ids = new Set<number>();
-
-	constructor ({ protocol }: CRDTConfig) {
-		this.protocol = protocol;
-	}
 
 	get value (): number {
 		return this.cachedValue;

@@ -1,6 +1,5 @@
 export interface CRDT {
 	sync (data?: unknown): unknown | null
-	protocol: string
 	value: unknown
 }
 
@@ -16,9 +15,3 @@ export interface CRDTWrapper {
 	crdt: CRDT
 	protocol: string
 }
-
-/*
-	end-appplications create their own interface for the crdts
-
-	new Libp2pStateReplication(Libp2p, CRDT[])
-*/
