@@ -1,11 +1,11 @@
-import type { CRDT, CRDTConfig } from "./interfaces.js";
+import type { CRDT, CRDTConfig, CRDTResolver } from "./interfaces.js";
 import type { CRDTMap } from "./CRDTMap.js";
 import type { LWWMap } from "./LWWMap.js";
 
 export class Table implements CRDT {
 	public readonly protocol = "/map/table";
 	private readonly rows: CRDTMap;
-	private readonly resolver: (protocol: string) => CRDT;
+	private readonly resolver: CRDTResolver;
 
 	constructor ({ resolver }: CRDTConfig) {
 		this.rows = resolver("/map/crdt") as CRDTMap;

@@ -12,7 +12,7 @@ import { TwoPSet } from "./TwoPSet.js";
 import { CRDTMap } from "./CRDTMap.js";
 import { LWWMap } from "./LWWMap.js";
 import { Table } from "./Table.js";
-import type { CRDT, CRDTConfig } from "./interfaces";
+import type { CRDT, CRDTConfig, CRDTResolver } from "./interfaces";
 
 const PROTOCOL = "/libp2p-state-replication/0.0.1";
 
@@ -42,11 +42,11 @@ export class StateReplicator {
 		})
 	);
 
-	get CRDTNames(): string[] {
+	get CRDTNames (): string[] {
 		return [...this.root.keys()];
 	}
 
-	get createCRDT() {
+	get createCRDT (): CRDTResolver {
 		return (protocol: string) => {
 			const crdtConstuctor = this.crdtConstrucotrs.get(protocol);
 
@@ -61,9 +61,11 @@ export class StateReplicator {
 	constructor({ libp2p }: { libp2p: Libp2p }) {
 		this.node = libp2p;
 
-		this.handle("/set/g", (c: CRDTConfig) => new GSet());
+		this.handle("/counter/pn", () => new Counter());
+		this.handle("/set/g", () => new GSet());
+		this.handle("/set/2p", () => new TwoPSet());
 		this.handle("/map/crdt", (c: CRDTConfig) => new CRDTMap(c));
-		this.handle("/map/lww", (c: CRDTConfig) => new LWWMap());
+		this.handle("/map/lww", () => new LWWMap());
 		this.handle("/map/table", (c: CRDTConfig) => new Table(c));
 
 		this.root = this.createCRDT("/map/crdt") as CRDTMap;
@@ -116,9 +118,6 @@ export class StateReplicator {
 				this.handleStream(stream, connection);
 			}
 
-			//for (const name of this.root.keys()) {
-			//	const crdt = this.root.get(name);
-
 			let sync = this.root.sync();
 			while (sync != null) {
 				const data = await this.rpc.request(
@@ -134,7 +133,6 @@ export class StateReplicator {
 
 				sync = this.root.sync(data);
 			}
-			//}
 		}
 	}
 
@@ -142,7 +140,7 @@ export class StateReplicator {
 		return this.root.get(name);
 	}
 
-	handle (protocol: string, crdtConstuctor: (config?: CRDTConfig) => CRDT) {
+	handle (protocol: string, crdtConstuctor: (config?: CRDTConfig) => CRDT): void {
 		this.crdtConstrucotrs.set(protocol, () => crdtConstuctor({
 			resolver: this.createCRDT,
 			id: this.node.peerId.toString()

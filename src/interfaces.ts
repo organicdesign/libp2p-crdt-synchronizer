@@ -9,7 +9,7 @@ export interface CRDTConfig {
 	id: string
 }
 
-export type CRDTConstuctor = (config?: CRDTConfig) => CRDT;
+export type CRDTResolver = (protocol: string) => CRDT;
 
 /*
 	end-appplications create their own interface for the crdts
