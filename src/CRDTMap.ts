@@ -23,31 +23,32 @@ export class CRDTMap implements CRDT {
 		return this.data[key];
 	}
 
-	sync (data?: { [key: string]: unknown }, obj?) {
-		const response: { [key: string]: unknown } = {};
+	sync (data?: { [key: string]: { sync: unknown, protocol: string } }) {
+		const response: { [key: string]: { sync: unknown, protocol: string } } = {};
 
 		if (data == null) {
 			for (const key of Object.keys(this.data)) {
-				response[key] = this.data[key].sync();
+				response[key] = { sync: this.data[key].sync(), protocol: this.data[key].protocol };
 			}
 
 			return response;
 		}
 
 		for (const key of Object.keys(data)) {
-			if (!this.data[key]) {
-				// We have no Idea what this data type is...
-				if (!obj) {
-					continue;
-				}
-
-				this.data[key] = new obj;
+			if (!this.data[key] || this.data[key].protocol < data[key].protocol) {
+				// Need to overwrite the local datatype with the remote...
+				console.warn("dynamic datatype not yet supported");
+				continue;
 			}
 
-			const subResponse = this.data[key].sync(data[key]);
+			if (this.data[key].protocol > data[key].protocol) {
+				continue;
+			}
+
+			const subResponse = this.data[key].sync(data[key].sync);
 
 			if (subResponse != null) {
-				response[key] = subResponse;
+				response[key] = { sync: subResponse, protocol: this.data[key].protocol };
 			}
 		}
 

@@ -28,6 +28,6 @@ export class Table implements CRDT {
 	}
 
 	sync (data?) {
-		return this.rows.sync(data, LWWMap);
+		return this.rows.sync(data);
 	}
 }
