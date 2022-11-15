@@ -5,6 +5,13 @@ import { LWWMap } from "./LWWMap.js";
 export class Table implements CRDT {
 	private rows = new CRDTMap();
 
+	get value () {
+		return Object.keys(this.rows.value).map(id => ({
+			id,
+			...(this.rows.get(id).value as object)
+		}));
+	}
+
 	create (id: string, data: { [key: string]: unknown }) {
 		if (this.rows.get(id) != null) {
 			throw new Error("row already exists");

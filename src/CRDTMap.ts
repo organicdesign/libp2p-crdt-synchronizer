@@ -4,6 +4,16 @@ import { CRDT } from "./interfaces.js";
 export class CRDTMap implements CRDT {
 	private data: { [key: string]: CRDT } = {};
 
+	get value () {
+		const output = {};
+
+		for (const key of Object.keys(this.data)) {
+			output[key] = this.data[key].value;
+		}
+
+		return output;
+	}
+
 	set (key: string, value: CRDT) {
 		this.data[key] = value;
 	}

@@ -4,6 +4,10 @@ export class LWWMap implements CRDT {
 	private data: { [key: string]: unknown } = {};
 	private timestamps: { [key: string]: string } = {};
 
+	get value () {
+		return { ...this.data };
+	}
+
 	set (key: string, data: unknown) {
 		this.timestamps[key] = Date.now().toString(16);
 		this.data[key] = data;

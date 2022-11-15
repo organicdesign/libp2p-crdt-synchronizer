@@ -25,7 +25,7 @@ export class GSet<T=unknown> implements CRDT, Iterable<T> {
 		return [...this.added.values()];
 	}
 
-	values (): T[] {
+	value (): T[] {
 		return [...this.added.values()];
 	}
 
