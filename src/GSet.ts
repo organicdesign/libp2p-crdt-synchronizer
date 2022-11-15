@@ -20,8 +20,8 @@ export class GSet<T=unknown> implements CRDT, Iterable<T> {
 		return [...this.added.values()];
 	}
 
-	value (): T[] {
-		return [...this.added.values()];
+	get value (): T[] {
+		return [...this.added.values()].sort();
 	}
 
 	[Symbol.iterator] () {

@@ -13,7 +13,7 @@ export class Table implements CRDT {
 	}
 
 	get value () {
-		return Object.keys(this.rows.value).map(id => ({
+		return Object.keys(this.rows.value).sort().map(id => ({
 			id,
 			...(this.rows.get(id).value as object)
 		}));

@@ -38,7 +38,7 @@ export class TwoPSet<T=unknown> implements CRDT {
 		}
 	}
 
-	value (): T[] {
+	get value (): T[] {
 		return [...this.added.values()];
 	}
 }

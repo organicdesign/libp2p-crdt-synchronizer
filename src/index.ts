@@ -42,6 +42,10 @@ export class StateReplicator {
 		})
 	);
 
+	get data (): CRDTMap {
+		return this.root;
+	}
+
 	get CRDTNames (): string[] {
 		return [...this.root.keys()];
 	}
@@ -61,6 +65,7 @@ export class StateReplicator {
 	constructor({ libp2p }: { libp2p: Libp2p }) {
 		this.node = libp2p;
 
+		// Types will not replicate if you do not handle.
 		this.handle("/counter/pn", () => new Counter());
 		this.handle("/set/g", () => new GSet());
 		this.handle("/set/2p", () => new TwoPSet());
@@ -70,27 +75,35 @@ export class StateReplicator {
 
 		this.root = this.createCRDT("/map/crdt") as CRDTMap;
 
-		/*
-		this.crdts.set("test", new GSet<string>([node.peerId.toString()]));
-		this.crdts.set("static", new GSet<string>(["static string"]));
-		const counter = new Counter();
+		// G Set
+		const gset = this.createCRDT("/set/g") as GSet;
+		gset.add(libp2p.peerId.toString());
+		gset.add("static string");
+		this.root.set("gset", gset);
+
+		// Counter
+		const counter = this.createCRDT("/counter/pn") as Counter;
 		counter.increment(Math.random());
-		this.crdts.set("counter", counter);
-		this.crdts.set("2pSet", new TwoPSet(["static string"]));
-		*/
+		this.root.set("counter", counter);
 
-		/*
-		const crdtMap = new CRDTMap();
-		crdtMap.set("a-set", new GSet([node.peerId.toString()]));
-		this.crdts.set("CRDTMap", crdtMap);
-		*/
+		// 2P Set
+		const twoPSet = this.createCRDT("/set/2p") as TwoPSet;
+		twoPSet.add("static string");
+		this.root.set("2pSet", twoPSet);
 
-		/*
+		// CRDT Map
+		const crdtMap = this.createCRDT("/map/crdt") as CRDTMap;
+		const subSet = this.createCRDT("/set/g") as GSet;
+		subSet.add(libp2p.peerId.toString());
+		crdtMap.set("a-set", subSet);
+		this.root.set("CRDTMap", crdtMap);
+
+		// LWW Map
 		const lwwMap = new LWWMap();
-		lwwMap.set("test", node.peerId.toString());
-		this.crdts.set("LWWMap", lwwMap);
-		*/
+		lwwMap.set("test", libp2p.peerId.toString());
+		this.root.set("LWWMap", lwwMap);
 
+		// Table
 		const table = this.createCRDT("/map/table") as Table;
 		table.create("test", { column1: "value1", column2: 23 });
 		table.create("test2", { column1: libp2p.peerId.toString(), column2: 1 });
