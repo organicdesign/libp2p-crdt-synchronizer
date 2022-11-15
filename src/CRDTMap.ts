@@ -28,6 +28,10 @@ export class CRDTMap implements CRDT {
 		return this.data[key];
 	}
 
+	keys () {
+		return Object.keys(this.data);
+	}
+
 	sync (data?: { [key: string]: { sync: unknown, protocol: string } }) {
 		const response: { [key: string]: { sync: unknown, protocol: string } } = {};
 

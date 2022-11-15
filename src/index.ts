@@ -17,6 +17,7 @@ import type { CRDT, CRDTConstuctor } from "./interfaces";
 const PROTOCOL = "/libp2p-state-replication/0.0.1";
 
 export class StateReplicator {
+	private readonly root: CRDTMap;
 	private readonly crdts = new Map<string, CRDT>();
 	private readonly crdtConstrucotrs = new Map<string, CRDTConstuctor>();
 	private readonly node: Libp2p;
@@ -43,19 +44,21 @@ export class StateReplicator {
 	);
 
 	get CRDTNames(): string[] {
-		return [...this.crdts.keys()];
+		return [...this.root.keys()];
 	}
 
 	get createCRDT() {
 		return (protocol: string) => this.crdtConstrucotrs.get(protocol)?.();
 	}
 
-	constructor({ libp2p, crdts }: { libp2p: Libp2p, crdts: new (...args: any[]) => CRDT }) {
+	constructor({ libp2p }: { libp2p: Libp2p }) {
 		this.node = libp2p;
 
-		this.crdtConstrucotrs.set("/set/g", () => new GSet());
-		this.crdtConstrucotrs.set("/map/crdt", () => new CRDTMap(this.createCRDT));
-		this.crdtConstrucotrs.set("/map/lww", () => new LWWMap());
+		this.root = new CRDTMap(this.createCRDT);
+
+		this.handle("/set/g", () => new GSet());
+		this.handle("/map/crdt", () => new CRDTMap(this.createCRDT));
+		this.handle("/map/lww", () => new LWWMap());
 
 		/*
 		this.crdts.set("test", new GSet<string>([node.peerId.toString()]));
@@ -82,20 +85,14 @@ export class StateReplicator {
 		table.create("test", { column1: "value1", column2: 23 });
 		table.create("test2", { column1: libp2p.peerId.toString(), column2: 1 });
 		table.create(libp2p.peerId.toString(), { unrelated: false });
-		this.crdts.set("table", table);
+		this.root.set("table", table);
 
 		libp2p.handle(PROTOCOL, async ({ stream, connection }) => {
 			this.handleStream(stream, connection);
 		});
 
-		this.rpc.addMethod("syncCRDT", async ({ name, data, protocol }: { name: string, data: unknown, protocol: string }) => {
-			const crdt = this.crdts.get(name);
-
-			if (crdt?.protocol !== protocol) {
-				return;
-			}
-
-			return crdt?.sync(data);
+		this.rpc.addMethod("syncCRDT", async ({ data }: { data: unknown }) => {
+			return this.root.sync(data as any);
 		});
 	}
 
@@ -111,30 +108,30 @@ export class StateReplicator {
 				this.handleStream(stream, connection);
 			}
 
-			for (const name of this.crdts.keys()) {
-				const crdt = this.crdts.get(name);
+			//for (const name of this.root.keys()) {
+			//	const crdt = this.root.get(name);
 
-				let sync = crdt?.sync();
-				while (sync != null) {
-					const data = await this.rpc.request(
-						"syncCRDT",
-						{ name, data: sync, protocol: crdt?.protocol },
-						connection.remotePeer.toString()
-					);
+			let sync = this.root.sync();
+			while (sync != null) {
+				const data = await this.rpc.request(
+					"syncCRDT",
+					{ data: sync },
+					connection.remotePeer.toString()
+				);
 
-					// Remote does not have any data to provide.
-					if (data == null) {
-						break;
-					}
-
-					sync = crdt?.sync(data);
+				// Remote does not have any data to provide.
+				if (data == null) {
+					break;
 				}
+
+				sync = this.root.sync(data);
 			}
+			//}
 		}
 	}
 
 	getCRDT (name: string): CRDT | undefined {
-		return this.crdts.get(name);
+		return this.root.get(name);
 	}
 
 	handle (protocol: string, crdtConstuctor: CRDTConstuctor) {
