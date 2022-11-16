@@ -1,6 +1,6 @@
 {
   "type": "module",
-  "name": "typescript-template",
+  "name": "libp2p-state-replicator",
   "version": "1.0.0",
   "description": "A template for NodeJS projects using typescript.",
   "main": "dist/index.js",
@@ -12,7 +12,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "ssh://git@code.organicdesign.nz:222/Saul/typescript-template.git"
+    "url": "ssh://git@code.organicdesign.nz:222/organicdesign/network-server-servicer.git"
   },
   "author": "Saul Boyd",
   "license": "GPL-3.0-or-later",
