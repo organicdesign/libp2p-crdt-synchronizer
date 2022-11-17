@@ -19,8 +19,8 @@ const PROTOCOL = "/libp2p-state-replication/0.0.1";
 export class Libp2pStateReplicator {
 	private readonly root: CRDTMap;
 	private readonly crdtConstrucotrs = new Map<string, () => CRDT>();
-	private readonly node: Libp2p;
 	private readonly writers = new Map<string, Pushable<Uint8Array>>();
+	private node: Libp2p;
 
 	private readonly rpc = new JSONRPCServerAndClient<string, string>(
 		new JSONRPCServer(),
@@ -62,9 +62,7 @@ export class Libp2pStateReplicator {
 		};
 	}
 
-	constructor({ libp2p }: { libp2p: Libp2p }) {
-		this.node = libp2p;
-
+	constructor() {
 		// Types will not replicate if you do not handle.
 		this.handle("/counter/pn", () => new Counter());
 		this.handle("/set/g", () => new GSet());
@@ -76,7 +74,9 @@ export class Libp2pStateReplicator {
 		this.root = this.createCRDT("/map/crdt") as CRDTMap;
 	}
 
-	start () {
+	start (libp2p: Libp2p) {
+		this.node = libp2p;
+
 		this.node.handle(PROTOCOL, async ({ stream, connection }) => {
 			this.handleStream(stream, connection);
 		});
