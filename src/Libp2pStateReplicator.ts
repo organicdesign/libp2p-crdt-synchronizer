@@ -74,8 +74,10 @@ export class Libp2pStateReplicator {
 		this.handle("/map/table", (c: CRDTConfig) => new Table(c));
 
 		this.root = this.createCRDT("/map/crdt") as CRDTMap;
+	}
 
-		libp2p.handle(PROTOCOL, async ({ stream, connection }) => {
+	start () {
+		this.node.handle(PROTOCOL, async ({ stream, connection }) => {
 			this.handleStream(stream, connection);
 		});
 

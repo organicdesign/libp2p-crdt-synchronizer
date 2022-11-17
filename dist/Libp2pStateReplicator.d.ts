@@ -13,6 +13,7 @@ export declare class Libp2pStateReplicator {
     constructor({ libp2p }: {
         libp2p: Libp2p;
     });
+    start(): void;
     requestBlocks(): Promise<void>;
     getCRDT(name: string): CRDT | undefined;
     handle(protocol: string, crdtConstuctor: (config?: CRDTConfig) => CRDT): void;

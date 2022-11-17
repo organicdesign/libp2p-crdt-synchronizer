@@ -52,12 +52,6 @@ export class Libp2pStateReplicator {
         this.handle("/map/lww", () => new LWWMap());
         this.handle("/map/table", (c) => new Table(c));
         this.root = this.createCRDT("/map/crdt");
-        libp2p.handle(PROTOCOL, ({ stream, connection }) => __awaiter(this, void 0, void 0, function* () {
-            this.handleStream(stream, connection);
-        }));
-        this.rpc.addMethod("syncCRDT", ({ data }) => __awaiter(this, void 0, void 0, function* () {
-            return this.root.sync(data);
-        }));
     }
     get data() {
         return this.root;
@@ -73,6 +67,14 @@ export class Libp2pStateReplicator {
             }
             return crdtConstuctor();
         };
+    }
+    start() {
+        this.node.handle(PROTOCOL, ({ stream, connection }) => __awaiter(this, void 0, void 0, function* () {
+            this.handleStream(stream, connection);
+        }));
+        this.rpc.addMethod("syncCRDT", ({ data }) => __awaiter(this, void 0, void 0, function* () {
+            return this.root.sync(data);
+        }));
     }
     requestBlocks() {
         return __awaiter(this, void 0, void 0, function* () {
