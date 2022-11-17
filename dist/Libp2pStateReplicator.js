@@ -28,7 +28,7 @@ import { LWWMap } from "./LWWMap.js";
 import { Table } from "./Table.js";
 const PROTOCOL = "/libp2p-state-replication/0.0.1";
 export class Libp2pStateReplicator {
-    constructor({ libp2p }) {
+    constructor() {
         this.crdtConstrucotrs = new Map();
         this.writers = new Map();
         this.rpc = new JSONRPCServerAndClient(new JSONRPCServer(), new JSONRPCClient((request, peerId) => __awaiter(this, void 0, void 0, function* () {
@@ -43,7 +43,6 @@ export class Libp2pStateReplicator {
             const asUint8Array = uint8ArrayFromString(JSON.stringify(request));
             writer.push(asUint8Array);
         })));
-        this.node = libp2p;
         // Types will not replicate if you do not handle.
         this.handle("/counter/pn", () => new Counter());
         this.handle("/set/g", () => new GSet());
@@ -68,7 +67,8 @@ export class Libp2pStateReplicator {
             return crdtConstuctor();
         };
     }
-    start() {
+    start(libp2p) {
+        this.node = libp2p;
         this.node.handle(PROTOCOL, ({ stream, connection }) => __awaiter(this, void 0, void 0, function* () {
             this.handleStream(stream, connection);
         }));
