@@ -6,6 +6,7 @@ export declare class LWWMap implements CRDT {
         [x: string]: unknown;
     };
     set(key: string, data: unknown): void;
+    get(key: string): unknown;
     sync(data?: any): {
         data: {
             [key: string]: unknown;

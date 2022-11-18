@@ -10,6 +10,9 @@ export class LWWMap {
         this.timestamps[key] = Date.now().toString(16);
         this.data[key] = data;
     }
+    get(key) {
+        return this.data[key];
+    }
     sync(data) {
         if (data == null) {
             return { data: this.data, timestamps: this.timestamps };

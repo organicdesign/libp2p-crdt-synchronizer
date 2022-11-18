@@ -13,6 +13,10 @@ export class LWWMap implements CRDT {
 		this.data[key] = data;
 	}
 
+	get (key: string): unknown {
+		return this.data[key];
+	}
+
 	sync (data?) {
 		if (data == null) {
 			return { data: this.data, timestamps: this.timestamps };
