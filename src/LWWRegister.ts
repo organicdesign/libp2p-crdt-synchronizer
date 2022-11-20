@@ -8,7 +8,7 @@ export class LWWRegister implements CRDT {
 		return this.data;
 	}
 
-	set (key: string, data: unknown) {
+	set (data: unknown) {
 		this.timestamp = Date.now().toString(16);
 		this.data = data;
 	}

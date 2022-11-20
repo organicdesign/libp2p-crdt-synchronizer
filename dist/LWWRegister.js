@@ -2,7 +2,7 @@ export class LWWRegister {
     get value() {
         return this.data;
     }
-    set(key, data) {
+    set(data) {
         this.timestamp = Date.now().toString(16);
         this.data = data;
     }
