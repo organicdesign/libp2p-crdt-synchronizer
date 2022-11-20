@@ -7,6 +7,7 @@ import { fromString as uint8ArrayFromString } from "uint8arrays/from-string";
 import { toString as uint8ArrayToString } from "uint8arrays/to-string";
 import type { Connection, Stream } from "@libp2p/interface-connection";
 import { GSet } from "./GSet.js";
+import { LWWRegister } from "./LWWRegister.js";
 import { Counter } from "./Counter.js";
 import { TwoPSet } from "./TwoPSet.js";
 import { CRDTMap } from "./CRDTMap.js";
@@ -66,6 +67,7 @@ export class Libp2pStateReplicator {
 		this.node = libp2p;
 
 		// Types will not replicate if you do not handle.
+		this.handle("/register/lww", () => new LWWRegister());
 		this.handle("/counter/pn", () => new Counter());
 		this.handle("/set/g", () => new GSet());
 		this.handle("/set/2p", () => new TwoPSet());
