@@ -5,3 +5,4 @@ export { TwoPSet } from "./TwoPSet.js";
 export { CRDTMap } from "./CRDTMap.js";
 export { LWWMap } from "./LWWMap.js";
 export { Table } from "./Table.js";
+export { LWWRegister } from "./LWWRegister.js";
