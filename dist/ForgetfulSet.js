@@ -1,32 +1,36 @@
 export class ForgetfulSet {
     constructor(_, config) {
-        this.added = new Set();
+        this.data = [];
         this.timeout = 1000 * 60;
         if (config === null || config === void 0 ? void 0 : config.timeout) {
             this.timeout = config.timeout;
         }
     }
-    add(item) {
-        const timestamp = Date.now();
-        this.added.add({ timestamp, value: item });
+    add(value) {
+        if (!this.data.find(i => i.value === value)) {
+            const timestamp = Date.now();
+            this.data.push({ timestamp, value });
+        }
     }
     sync(data) {
         if (data != null) {
             const timestamp = Date.now();
             // Forget items...
-            for (const item of this.added) {
+            for (const [index, item] of this.data.entries()) {
                 if (item.timestamp + this.timeout < timestamp) {
-                    this.added.delete(item);
+                    this.data.splice(index, 1);
                 }
             }
-            for (const added of data) {
-                this.added.add(added);
+            for (const item of data) {
+                if (!this.data.find(i => i.value === item.value)) {
+                    this.data.push(item);
+                }
             }
             return null;
         }
-        return [...this.added.values()];
+        return [...this.data];
     }
     get value() {
-        return [...this.added.values()].sort();
+        return [...this.data].sort();
     }
 }

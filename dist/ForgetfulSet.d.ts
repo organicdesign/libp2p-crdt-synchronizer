@@ -4,12 +4,12 @@ interface TimestampedItem<T = unknown> {
     value: T;
 }
 export declare class ForgetfulSet<T = unknown> implements CRDT {
-    private readonly added;
+    private readonly data;
     private readonly timeout;
     constructor(_?: CRDTConfig, config?: {
         timeout?: number;
     });
-    add(item: T): void;
+    add(value: T): void;
     sync(data?: TimestampedItem<T>[]): TimestampedItem<T>[] | null;
     get value(): TimestampedItem<T>[];
 }
