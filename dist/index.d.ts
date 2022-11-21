@@ -2,6 +2,7 @@ export { Libp2pStateReplicator } from "./Libp2pStateReplicator.js";
 export { GSet } from "./GSet.js";
 export { Counter } from "./Counter.js";
 export { TwoPSet } from "./TwoPSet.js";
+export { ForgetfulSet } from "./ForgetfulSet.js";
 export { CRDTMap } from "./CRDTMap.js";
 export { LWWMap } from "./LWWMap.js";
 export { Table } from "./Table.js";

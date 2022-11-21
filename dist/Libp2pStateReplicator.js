@@ -22,6 +22,7 @@ import { fromString as uint8ArrayFromString } from "uint8arrays/from-string";
 import { toString as uint8ArrayToString } from "uint8arrays/to-string";
 import { GSet } from "./GSet.js";
 import { LWWRegister } from "./LWWRegister.js";
+import { ForgetfulSet } from "./ForgetfulSet.js";
 import { Counter } from "./Counter.js";
 import { TwoPSet } from "./TwoPSet.js";
 import { CRDTMap } from "./CRDTMap.js";
@@ -50,6 +51,7 @@ export class Libp2pStateReplicator {
         this.handle("/counter/pn", () => new Counter());
         this.handle("/set/g", () => new GSet());
         this.handle("/set/2p", () => new TwoPSet());
+        this.handle("/set/forgetful", () => new ForgetfulSet());
         this.handle("/map/crdt", (c) => new CRDTMap(c));
         this.handle("/map/lww", () => new LWWMap());
         this.handle("/map/table", (c) => new Table(c));
