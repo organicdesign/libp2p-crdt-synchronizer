@@ -4,6 +4,7 @@ export { Counter } from "./Counter.js";
 export { TwoPSet } from "./TwoPSet.js";
 export { ForgetfulSet } from "./ForgetfulSet.js";
 export { CRDTMap } from "./CRDTMap.js";
+export { ForgetfulLWWMap } from "./ForgetfulLWWMap.js";
 export { LWWMap } from "./LWWMap.js";
 export { Table } from "./Table.js";
 export { LWWRegister } from "./LWWRegister.js";

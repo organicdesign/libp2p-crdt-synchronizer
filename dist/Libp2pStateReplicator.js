@@ -26,6 +26,7 @@ import { ForgetfulSet } from "./ForgetfulSet.js";
 import { Counter } from "./Counter.js";
 import { TwoPSet } from "./TwoPSet.js";
 import { CRDTMap } from "./CRDTMap.js";
+import { ForgetfulLWWMap } from "./ForgetfulLWWMap.js";
 import { LWWMap } from "./LWWMap.js";
 import { Table } from "./Table.js";
 const PROTOCOL = "/libp2p-state-replication/0.0.1";
@@ -53,6 +54,7 @@ export class Libp2pStateReplicator {
         this.handle("/set/2p", () => new TwoPSet());
         this.handle("/set/forgetful", () => new ForgetfulSet());
         this.handle("/map/crdt", (c) => new CRDTMap(c));
+        this.handle("/map/forgetfullww", () => new ForgetfulLWWMap());
         this.handle("/map/lww", () => new LWWMap());
         this.handle("/map/table", (c) => new Table(c));
         this.root = this.createCRDT("/map/crdt");

@@ -12,6 +12,7 @@ import { ForgetfulSet } from "./ForgetfulSet.js";
 import { Counter } from "./Counter.js";
 import { TwoPSet } from "./TwoPSet.js";
 import { CRDTMap } from "./CRDTMap.js";
+import { ForgetfulLWWMap } from "./ForgetfulLWWMap.js";
 import { LWWMap } from "./LWWMap.js";
 import { Table } from "./Table.js";
 import type { CRDT, CRDTConfig, CRDTResolver } from "./interfaces";
@@ -74,6 +75,7 @@ export class Libp2pStateReplicator {
 		this.handle("/set/2p", () => new TwoPSet());
 		this.handle("/set/forgetful", () => new ForgetfulSet());
 		this.handle("/map/crdt", (c: CRDTConfig) => new CRDTMap(c));
+		this.handle("/map/forgetfullww", () => new ForgetfulLWWMap());
 		this.handle("/map/lww", () => new LWWMap());
 		this.handle("/map/table", (c: CRDTConfig) => new Table(c));
 
