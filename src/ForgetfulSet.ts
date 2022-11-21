@@ -41,7 +41,7 @@ export class ForgetfulSet<T=unknown> implements CRDT {
 		return [...this.data];
 	}
 
-	get value (): TimestampedItem<T>[] {
-		return [...this.data].sort();
+	get value (): T[] {
+		return this.data.map(i => i.value).sort();
 	}
 }
