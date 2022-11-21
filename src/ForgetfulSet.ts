@@ -25,11 +25,6 @@ export class ForgetfulSet<T=unknown> implements CRDT {
 
 	sync (data?: TimestampedItem<T>[]): TimestampedItem<T>[] | null {
 		if (data != null) {
-			const timestamp = Date.now();
-
-			// Forget items...
-			this.data = this.data.filter(item => item.timestamp + this.timeout > timestamp);
-
 			for (const item of data) {
 				if (!this.data.find(i => i.value === item.value)) {
 					this.data.push(item);
@@ -38,6 +33,10 @@ export class ForgetfulSet<T=unknown> implements CRDT {
 
 			return null;
 		}
+
+		// Forget items...
+		const timestamp = Date.now();
+		this.data = this.data.filter(item => item.timestamp + this.timeout > timestamp);
 
 		return [...this.data];
 	}
