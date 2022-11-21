@@ -6,7 +6,7 @@ interface TimestampedItem<T=unknown> {
 }
 
 export class ForgetfulSet<T=unknown> implements CRDT {
-	private readonly data: TimestampedItem<T>[] = [];
+	private data: TimestampedItem<T>[] = [];
 	private readonly timeout = 1000 * 60;
 
 	constructor (_? :CRDTConfig, config?: { timeout?: number }) {
@@ -28,11 +28,7 @@ export class ForgetfulSet<T=unknown> implements CRDT {
 			const timestamp = Date.now();
 
 			// Forget items...
-			for (const [index, item] of this.data.entries()) {
-				if (item.timestamp + this.timeout < timestamp) {
-					this.data.splice(index, 1);
-				}
-			}
+			this.data = this.data.filter(item => item.timestamp + this.timeout > timestamp);
 
 			for (const item of data) {
 				if (!this.data.find(i => i.value === item.value)) {

@@ -16,11 +16,7 @@ export class ForgetfulSet {
         if (data != null) {
             const timestamp = Date.now();
             // Forget items...
-            for (const [index, item] of this.data.entries()) {
-                if (item.timestamp + this.timeout < timestamp) {
-                    this.data.splice(index, 1);
-                }
-            }
+            this.data = this.data.filter(item => item.timestamp + this.timeout > timestamp);
             for (const item of data) {
                 if (!this.data.find(i => i.value === item.value)) {
                     this.data.push(item);
