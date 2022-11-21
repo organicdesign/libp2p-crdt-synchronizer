@@ -20,8 +20,6 @@ export class ForgetfulSet {
         if (data != null) {
             for (const item of data) {
                 const data = this.data.find(i => i.value === item.value);
-                if (!this.data.find(i => i.value === item.value)) {
-                }
                 if (data) {
                     if (item.timestamp > data.timestamp) {
                         data.timestamp = item.timestamp;
