@@ -11,6 +11,6 @@ export declare class ForgetfulSet<T = unknown> implements CRDT {
     });
     add(value: T): void;
     sync(data?: TimestampedItem<T>[]): TimestampedItem<T>[] | null;
-    get value(): TimestampedItem<T>[];
+    get value(): T[];
 }
 export {};

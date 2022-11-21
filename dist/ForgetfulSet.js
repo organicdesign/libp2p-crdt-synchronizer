@@ -7,7 +7,11 @@ export class ForgetfulSet {
         }
     }
     add(value) {
-        if (!this.data.find(i => i.value === value)) {
+        const data = this.data.find(i => i.value === value);
+        if (data) {
+            data.timestamp = Date.now();
+        }
+        else {
             const timestamp = Date.now();
             this.data.push({ timestamp, value });
         }
@@ -15,7 +19,15 @@ export class ForgetfulSet {
     sync(data) {
         if (data != null) {
             for (const item of data) {
+                const data = this.data.find(i => i.value === item.value);
                 if (!this.data.find(i => i.value === item.value)) {
+                }
+                if (data) {
+                    if (item.timestamp > data.timestamp) {
+                        data.timestamp = item.timestamp;
+                    }
+                }
+                else {
                     this.data.push(item);
                 }
             }
@@ -27,6 +39,6 @@ export class ForgetfulSet {
         return [...this.data];
     }
     get value() {
-        return [...this.data].sort();
+        return this.data.map(i => i.value).sort();
     }
 }
