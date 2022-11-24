@@ -15,4 +15,5 @@ export declare class LWWMap implements CRDT {
             [key: string]: string;
         };
     } | undefined;
+    keys(): string[];
 }

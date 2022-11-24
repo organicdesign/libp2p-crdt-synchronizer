@@ -24,4 +24,7 @@ export class LWWMap {
             }
         }
     }
+    keys() {
+        return Object.keys(this.data);
+    }
 }
