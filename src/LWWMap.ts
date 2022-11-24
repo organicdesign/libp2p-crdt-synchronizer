@@ -29,4 +29,8 @@ export class LWWMap implements CRDT {
 			}
 		}
 	}
+
+	keys () {
+		return Object.keys(this.data);
+	}
 }
