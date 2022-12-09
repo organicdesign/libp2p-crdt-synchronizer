@@ -6,22 +6,12 @@ import { pushable, Pushable } from "it-pushable";
 import { fromString as uint8ArrayFromString } from "uint8arrays/from-string";
 import { toString as uint8ArrayToString } from "uint8arrays/to-string";
 import type { Connection, Stream } from "@libp2p/interface-connection";
-import { GSet } from "./GSet.js";
-import { LWWRegister } from "./LWWRegister.js";
-import { ForgetfulSet } from "./ForgetfulSet.js";
-import { Counter } from "./Counter.js";
-import { TwoPSet } from "./TwoPSet.js";
-import { CRDTMap } from "./CRDTMap.js";
-import { ForgetfulLWWMap } from "./ForgetfulLWWMap.js";
-import { LWWMap } from "./LWWMap.js";
-import { Table } from "./Table.js";
-import type { CRDT, CRDTConfig, CRDTResolver } from "./interfaces";
+import type { CRDT } from "crdt-interfaces";
 
 const PROTOCOL = "/libp2p-state-replication/0.0.1";
 
 export class Libp2pStateReplicator {
-	private readonly root: CRDTMap;
-	private readonly crdtConstrucotrs = new Map<string, () => CRDT>();
+	private readonly crdts = new Map<string, CRDT>();
 	private readonly node: Libp2p;
 	private readonly writers = new Map<string, Pushable<Uint8Array>>();
 
@@ -44,15 +34,19 @@ export class Libp2pStateReplicator {
 			writer.push(asUint8Array);
 		})
 	);
-
+/*
 	get data (): CRDTMap {
 		return this.root;
 	}
-
+*/
 	get CRDTNames (): string[] {
-		return [...this.root.keys()];
+		return [...this.crdts.keys()];
 	}
 
+	setCRDT (name: string, crdt: CRDT): void {
+		this.crdts.set(name, crdt);
+	}
+/*
 	get createCRDT (): CRDTResolver {
 		return (protocol: string) => {
 			const crdtConstuctor = this.crdtConstrucotrs.get(protocol);
@@ -64,22 +58,22 @@ export class Libp2pStateReplicator {
 			return crdtConstuctor();
 		};
 	}
-
+*/
 	constructor({ libp2p }: { libp2p: Libp2p }) {
 		this.node = libp2p;
 
 		// Types will not replicate if you do not handle.
-		this.handle("/register/lww", () => new LWWRegister());
-		this.handle("/counter/pn", () => new Counter());
-		this.handle("/set/g", () => new GSet());
-		this.handle("/set/2p", () => new TwoPSet());
+		//this.handle("/register/lww", () => new LWWRegister());
+		//this.handle("/counter/pn", () => createPNCounter({ id: libp2p.peerId.toString() }));
+		//this.handle("/set/g", () => createGSet({ id: libp2p.peerId.toString() }));
+		/*this.handle("/set/2p", () => new TwoPSet());
 		this.handle("/set/forgetful", () => new ForgetfulSet());
 		this.handle("/map/crdt", (c: CRDTConfig) => new CRDTMap(c));
 		this.handle("/map/forgetfullww", () => new ForgetfulLWWMap());
 		this.handle("/map/lww", () => new LWWMap());
-		this.handle("/map/table", (c: CRDTConfig) => new Table(c));
+		this.handle("/map/table", (c: CRDTConfig) => new Table(c));*/
 
-		this.root = this.createCRDT("/map/crdt") as CRDTMap;
+		//this.root = this.createCRDT("/map/crdt") as CRDTMap;
 	}
 
 	start () {
@@ -87,8 +81,23 @@ export class Libp2pStateReplicator {
 			this.handleStream(stream, connection);
 		});
 
-		this.rpc.addMethod("syncCRDT", async ({ data }: { data: any }) => {
-			return this.root.sync(data);
+		this.rpc.addMethod("syncCRDT", async ({ name, data }: { name: string, data: string }) => {
+			const crdt = this.crdts.get(name);
+
+			if (crdt == null) {
+				return;
+			}
+
+			const decodedData = uint8ArrayFromString(data, "ascii");
+
+
+			const response = crdt.sync(decodedData);
+
+			if (!response) {
+				return;
+			}
+
+			return uint8ArrayToString(response, "ascii");
 		});
 	}
 
@@ -104,28 +113,33 @@ export class Libp2pStateReplicator {
 				this.handleStream(stream, connection);
 			}
 
-			let sync = this.root.sync();
-			while (sync != null) {
-				const data = await this.rpc.request(
-					"syncCRDT",
-					{ data: sync },
-					connection.remotePeer.toString()
-				);
+			for (const [name, crdt] of this.crdts) {
+				let sync = crdt.sync();
 
-				// Remote does not have any data to provide.
-				if (data == null) {
-					break;
+				while (sync != null) {
+					const raw: string | undefined = await this.rpc.request(
+						"syncCRDT",
+						{ name, data: uint8ArrayToString(sync, "ascii") },
+						connection.remotePeer.toString()
+					);
+
+					// Remote does not have any data to provide.
+					if (raw == null) {
+						break;
+					}
+
+					const data = uint8ArrayFromString(raw, "ascii");
+
+					sync = crdt.sync(data);
 				}
-
-				sync = this.root.sync(data);
 			}
 		}
 	}
 
 	getCRDT (name: string): CRDT | undefined {
-		return this.root.get(name);
+		return this.crdts.get(name);
 	}
-
+/*
 	handle (protocol: string, crdtConstuctor: (config?: CRDTConfig) => CRDT): void {
 		this.crdtConstrucotrs.set(protocol, () => crdtConstuctor({
 			resolver: this.createCRDT,
@@ -133,7 +147,7 @@ export class Libp2pStateReplicator {
 			protocol
 		}));
 	}
-
+*/
 	private handleStream (stream: Stream, connection: Connection) {
 		const that = this;
 		const peerId = connection.remotePeer.toString();
