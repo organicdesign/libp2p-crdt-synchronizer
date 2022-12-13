@@ -91,7 +91,7 @@ export class Libp2pStateReplicator {
 			const decodedData = uint8ArrayFromString(data, "ascii");
 
 
-			const response = crdt.sync(decodedData);
+			const response = crdt.sync(decodedData, { id: new Uint8Array([1]) });
 
 			if (!response) {
 				return;
@@ -114,7 +114,7 @@ export class Libp2pStateReplicator {
 			}
 
 			for (const [name, crdt] of this.crdts) {
-				let sync = crdt.sync();
+				let sync = crdt.sync(undefined, { id: new Uint8Array([1]) });
 
 				while (sync != null) {
 					const raw: string | undefined = await this.rpc.request(
@@ -130,7 +130,7 @@ export class Libp2pStateReplicator {
 
 					const data = uint8ArrayFromString(raw, "ascii");
 
-					sync = crdt.sync(data);
+					sync = crdt.sync(data, { id: new Uint8Array([1]) });
 				}
 			}
 		}
