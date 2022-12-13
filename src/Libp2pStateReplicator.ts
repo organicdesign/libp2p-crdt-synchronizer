@@ -34,11 +34,7 @@ export class Libp2pStateReplicator {
 			writer.push(asUint8Array);
 		})
 	);
-/*
-	get data (): CRDTMap {
-		return this.root;
-	}
-*/
+
 	get CRDTNames (): string[] {
 		return [...this.crdts.keys()];
 	}
@@ -46,34 +42,9 @@ export class Libp2pStateReplicator {
 	setCRDT (name: string, crdt: CRDT): void {
 		this.crdts.set(name, crdt);
 	}
-/*
-	get createCRDT (): CRDTResolver {
-		return (protocol: string) => {
-			const crdtConstuctor = this.crdtConstrucotrs.get(protocol);
 
-			if (crdtConstuctor == null) {
-				throw new Error(`missing constructor for protocol: ${protocol}`);
-			}
-
-			return crdtConstuctor();
-		};
-	}
-*/
 	constructor({ libp2p }: { libp2p: Libp2p }) {
 		this.node = libp2p;
-
-		// Types will not replicate if you do not handle.
-		//this.handle("/register/lww", () => new LWWRegister());
-		//this.handle("/counter/pn", () => createPNCounter({ id: libp2p.peerId.toString() }));
-		//this.handle("/set/g", () => createGSet({ id: libp2p.peerId.toString() }));
-		/*this.handle("/set/2p", () => new TwoPSet());
-		this.handle("/set/forgetful", () => new ForgetfulSet());
-		this.handle("/map/crdt", (c: CRDTConfig) => new CRDTMap(c));
-		this.handle("/map/forgetfullww", () => new ForgetfulLWWMap());
-		this.handle("/map/lww", () => new LWWMap());
-		this.handle("/map/table", (c: CRDTConfig) => new Table(c));*/
-
-		//this.root = this.createCRDT("/map/crdt") as CRDTMap;
 	}
 
 	start () {
@@ -139,15 +110,7 @@ export class Libp2pStateReplicator {
 	getCRDT (name: string): CRDT | undefined {
 		return this.crdts.get(name);
 	}
-/*
-	handle (protocol: string, crdtConstuctor: (config?: CRDTConfig) => CRDT): void {
-		this.crdtConstrucotrs.set(protocol, () => crdtConstuctor({
-			resolver: this.createCRDT,
-			id: this.node.peerId.toString(),
-			protocol
-		}));
-	}
-*/
+
 	private handleStream (stream: Stream, connection: Connection) {
 		const that = this;
 		const peerId = connection.remotePeer.toString();
