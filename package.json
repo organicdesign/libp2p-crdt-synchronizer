@@ -32,11 +32,11 @@
     "typescript": "^4.8.4"
   },
   "dependencies": {
+    "crdt-protocols": "git+ssh://git@code.organicdesign.nz:222/organicdesign/crdt-protocols.git",
     "distributed-state-synchronizer": "git+ssh://git@code.organicdesign.nz:222/organicdesign/distributed-state-synchronizer.git",
     "it-length-prefixed": "^8.0.3",
     "it-pair": "^2.0.3",
     "it-pipe": "^2.0.4",
-    "it-pushable": "^3.1.0",
-    "json-rpc-2.0": "^1.4.1"
+    "it-pushable": "^3.1.0"
   }
 }

@@ -2,13 +2,12 @@ import type { ConnectionManager } from "@libp2p/interface-connection-manager";
 import type { Registrar } from "@libp2p/interface-registrar";
 import type { PubSub } from "@libp2p/interface-pubsub";
 import type { Connection, Stream } from "@libp2p/interface-connection";
+import type { PeerId } from "@libp2p/interface-peer-id";
 import type { CRDT } from "crdt-interfaces";
-import { JSONRPCServerAndClient, JSONRPCClient, JSONRPCServer } from "json-rpc-2.0";
+import { CRDTSynchronizer as SyncProtocol } from "crdt-protocols/synchronizer";
 import * as lp from "it-length-prefixed";
 import { pipe } from "it-pipe";
 import { pushable, Pushable } from "it-pushable";
-import { fromString as uint8ArrayFromString } from "uint8arrays/from-string";
-import { toString as uint8ArrayToString } from "uint8arrays/to-string";
 
 export interface CRDTSynchronizerOpts {
 	protocol: string
@@ -25,26 +24,13 @@ export class CRDTSynchronizer {
 	private readonly crdts = new Map<string, CRDT>();
 	private readonly components: CRDTSynchronizerComponents;
 	private readonly writers = new Map<string, Pushable<Uint8Array>>();
+	private readonly msgPromises = new Map<number, (value: SyncProtocol) => void>();
 
-	private readonly rpc = new JSONRPCServerAndClient<string, string>(
-		new JSONRPCServer(),
-		new JSONRPCClient(async (request: object, peerId: string) => {
-			if (peerId == null) {
-				throw new Error("peer Id must be specified");
-			}
+	private readonly genMsgId = (() => {
+		let id = 0;
 
-			const writer = this.writers.get(peerId);
-
-			if (!writer) {
-				console.warn("not connected");
-				return;
-			}
-
-			const asUint8Array = uint8ArrayFromString(JSON.stringify(request));
-
-			writer.push(asUint8Array);
-		})
-	);
+		return () => id++;
+	})();
 
 	get CRDTNames (): string[] {
 		return [...this.crdts.keys()];
@@ -66,25 +52,6 @@ export class CRDTSynchronizer {
 		this.components.registrar.handle(this.options.protocol, async ({ stream, connection }) => {
 			this.handleStream(stream, connection);
 		});
-
-		this.rpc.addMethod("syncCRDT", async ({ name, data }: { name: string, data: string }) => {
-			const crdt = this.crdts.get(name);
-
-			if (crdt == null) {
-				return;
-			}
-
-			const decodedData = uint8ArrayFromString(data, "ascii");
-
-
-			const response = crdt.sync(decodedData, { id: new Uint8Array([1]) });
-
-			if (!response) {
-				return;
-			}
-
-			return uint8ArrayToString(response, "ascii");
-		});
 	}
 
 	async requestBlocks () {
@@ -99,24 +66,36 @@ export class CRDTSynchronizer {
 				this.handleStream(stream, connection);
 			}
 
+			const writer = this.writers.get(connection.remotePeer.toString());
+
+			if (writer == null) {
+				console.warn("not connected");
+				continue;
+			}
+
 			for (const [name, crdt] of this.crdts) {
-				let sync = crdt.sync(undefined, { id: new Uint8Array([1]) });
+				let sync = crdt.sync(undefined, { id: connection.remotePeer.toBytes() });
 
 				while (sync != null) {
-					const raw: string | undefined = await this.rpc.request(
-						"syncCRDT",
-						{ name, data: uint8ArrayToString(sync, "ascii") },
-						connection.remotePeer.toString()
-					);
+					const messageId = this.genMsgId();
+
+					writer.push(SyncProtocol.encode({
+						name,
+						data: sync ?? new Uint8Array([]),
+						id: messageId,
+						request: true
+					}));
+
+					const response = await new Promise((resolve: (value: SyncProtocol) => void) => {
+						this.msgPromises.set(messageId, resolve);
+					});
 
 					// Remote does not have any data to provide.
-					if (raw == null) {
+					if (response.data.length === 0) {
 						break;
 					}
 
-					const data = uint8ArrayFromString(raw, "ascii");
-
-					sync = crdt.sync(data, { id: new Uint8Array([1]) });
+					sync = crdt.sync(response.data, { id: connection.remotePeer.toBytes() });
 				}
 			}
 		}
@@ -126,6 +105,21 @@ export class CRDTSynchronizer {
 		return this.crdts.get(name);
 	}
 
+	private handleSync (message: SyncProtocol, peerId: PeerId): Uint8Array {
+		const crdt = this.crdts.get(message.name);
+		let response: Uint8Array = new Uint8Array();
+
+		if (crdt != null && message.data.length !== 0) {
+			response = crdt.sync(message.data, { id: peerId.toBytes() }) ?? new Uint8Array();
+		}
+
+		return SyncProtocol.encode({
+			name: message.name,
+			data: response,
+			id: message.id
+		});
+	}
+
 	private handleStream (stream: Stream, connection: Connection) {
 		const that = this;
 		const peerId = connection.remotePeer.toString();
@@ -133,8 +127,19 @@ export class CRDTSynchronizer {
 		// Handle inputs.
 		pipe(stream, lp.decode(), async function (source) {
 			for await (const message of source) {
-				const data = JSON.parse(uint8ArrayToString(message.subarray()));
-				await that.rpc.receiveAndSend(data, peerId, peerId);
+				const data = SyncProtocol.decode(message);
+
+				if (data.request === true) {
+					const response = that.handleSync(data, connection.remotePeer);
+					const writer = that.writers.get(peerId.toString());
+
+					writer?.push(response);
+				} else {
+					const resolver = that.msgPromises.get(data.id);
+
+					that.msgPromises.delete(data.id);
+					resolver?.(data);
+				}
 			}
 		}).catch(() => {
 			// Do nothing
