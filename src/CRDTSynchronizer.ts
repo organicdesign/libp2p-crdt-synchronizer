@@ -54,7 +54,7 @@ export class CRDTSynchronizer {
 		});
 	}
 
-	async requestBlocks () {
+	async sync () {
 		const connections = this.components.connectionManager.getConnections();
 
 		for (const connection of connections) {
