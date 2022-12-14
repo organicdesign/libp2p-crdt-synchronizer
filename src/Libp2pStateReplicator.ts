@@ -1,5 +1,7 @@
 import { JSONRPCServerAndClient, JSONRPCClient, JSONRPCServer } from "json-rpc-2.0";
-import type { Libp2p } from "libp2p";
+import type { ConnectionManager } from "@libp2p/interface-connection-manager";
+import type { Registrar } from "@libp2p/interface-registrar";
+import type { PubSub } from "@libp2p/interface-pubsub";
 import * as lp from "it-length-prefixed";
 import { pipe } from "it-pipe";
 import { pushable, Pushable } from "it-pushable";
@@ -10,9 +12,19 @@ import type { CRDT } from "crdt-interfaces";
 
 const PROTOCOL = "/libp2p-state-replication/0.0.1";
 
+export interface Libp2pStateReplicatorOpts {
+	protocol: string
+}
+
+export interface Libp2pStateReplicatorComponents {
+	connectionManager: ConnectionManager
+	registrar: Registrar,
+	pubsub?: PubSub
+}
+
 export class Libp2pStateReplicator {
 	private readonly crdts = new Map<string, CRDT>();
-	private readonly node: Libp2p;
+	private readonly components: Libp2pStateReplicatorComponents;
 	private readonly writers = new Map<string, Pushable<Uint8Array>>();
 
 	private readonly rpc = new JSONRPCServerAndClient<string, string>(
@@ -43,12 +55,12 @@ export class Libp2pStateReplicator {
 		this.crdts.set(name, crdt);
 	}
 
-	constructor({ libp2p }: { libp2p: Libp2p }) {
-		this.node = libp2p;
+	constructor(components: Libp2pStateReplicatorComponents, options: Partial<Libp2pStateReplicatorOpts> = {}) {
+		this.components = components;
 	}
 
 	start () {
-		this.node.handle(PROTOCOL, async ({ stream, connection }) => {
+		this.components.registrar.handle(PROTOCOL, async ({ stream, connection }) => {
 			this.handleStream(stream, connection);
 		});
 
@@ -73,7 +85,7 @@ export class Libp2pStateReplicator {
 	}
 
 	async requestBlocks () {
-		const connections = this.node.connectionManager.getConnections();
+		const connections = this.components.connectionManager.getConnections();
 
 		for (const connection of connections) {
 			// Only open a new stream if we don't already have on open.
@@ -144,3 +156,5 @@ export class Libp2pStateReplicator {
 		})();
 	}
 }
+
+export const createLibp2pStateReplicator = (options: Partial<Libp2pStateReplicatorOpts>) => (components: Libp2pStateReplicatorComponents) => new Libp2pStateReplicator(components, options);

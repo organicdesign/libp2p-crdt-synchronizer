@@ -1,1 +1,1 @@
-export { Libp2pStateReplicator } from "./Libp2pStateReplicator.js";
+export { Libp2pStateReplicator, createLibp2pStateReplicator } from "./Libp2pStateReplicator.js";
