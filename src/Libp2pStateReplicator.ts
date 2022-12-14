@@ -1,16 +1,14 @@
-import { JSONRPCServerAndClient, JSONRPCClient, JSONRPCServer } from "json-rpc-2.0";
 import type { ConnectionManager } from "@libp2p/interface-connection-manager";
 import type { Registrar } from "@libp2p/interface-registrar";
 import type { PubSub } from "@libp2p/interface-pubsub";
+import type { Connection, Stream } from "@libp2p/interface-connection";
+import type { CRDT } from "crdt-interfaces";
+import { JSONRPCServerAndClient, JSONRPCClient, JSONRPCServer } from "json-rpc-2.0";
 import * as lp from "it-length-prefixed";
 import { pipe } from "it-pipe";
 import { pushable, Pushable } from "it-pushable";
 import { fromString as uint8ArrayFromString } from "uint8arrays/from-string";
 import { toString as uint8ArrayToString } from "uint8arrays/to-string";
-import type { Connection, Stream } from "@libp2p/interface-connection";
-import type { CRDT } from "crdt-interfaces";
-
-const PROTOCOL = "/libp2p-state-replication/0.0.1";
 
 export interface Libp2pStateReplicatorOpts {
 	protocol: string
@@ -23,6 +21,7 @@ export interface Libp2pStateReplicatorComponents {
 }
 
 export class Libp2pStateReplicator {
+	private readonly options: Libp2pStateReplicatorOpts;
 	private readonly crdts = new Map<string, CRDT>();
 	private readonly components: Libp2pStateReplicatorComponents;
 	private readonly writers = new Map<string, Pushable<Uint8Array>>();
@@ -56,11 +55,15 @@ export class Libp2pStateReplicator {
 	}
 
 	constructor(components: Libp2pStateReplicatorComponents, options: Partial<Libp2pStateReplicatorOpts> = {}) {
+		this.options = {
+			protocol: options.protocol ?? "/libp2p-state-replication/0.0.1"
+		};
+
 		this.components = components;
 	}
 
 	start () {
-		this.components.registrar.handle(PROTOCOL, async ({ stream, connection }) => {
+		this.components.registrar.handle(this.options.protocol, async ({ stream, connection }) => {
 			this.handleStream(stream, connection);
 		});
 
@@ -91,7 +94,7 @@ export class Libp2pStateReplicator {
 			// Only open a new stream if we don't already have on open.
 			if (!this.writers.has(connection.remotePeer.toString())) {
 				// This will throw if the node does not support this protocol
-				const stream = await connection.newStream(PROTOCOL);
+				const stream = await connection.newStream(this.options.protocol);
 
 				this.handleStream(stream, connection);
 			}
