@@ -10,20 +10,20 @@ import { pushable, Pushable } from "it-pushable";
 import { fromString as uint8ArrayFromString } from "uint8arrays/from-string";
 import { toString as uint8ArrayToString } from "uint8arrays/to-string";
 
-export interface Libp2pStateReplicatorOpts {
+export interface CRDTSynchronizerOpts {
 	protocol: string
 }
 
-export interface Libp2pStateReplicatorComponents {
+export interface CRDTSynchronizerComponents {
 	connectionManager: ConnectionManager
 	registrar: Registrar,
 	pubsub?: PubSub
 }
 
-export class Libp2pStateReplicator {
-	private readonly options: Libp2pStateReplicatorOpts;
+export class CRDTSynchronizer {
+	private readonly options: CRDTSynchronizerOpts;
 	private readonly crdts = new Map<string, CRDT>();
-	private readonly components: Libp2pStateReplicatorComponents;
+	private readonly components: CRDTSynchronizerComponents;
 	private readonly writers = new Map<string, Pushable<Uint8Array>>();
 
 	private readonly rpc = new JSONRPCServerAndClient<string, string>(
@@ -54,9 +54,9 @@ export class Libp2pStateReplicator {
 		this.crdts.set(name, crdt);
 	}
 
-	constructor(components: Libp2pStateReplicatorComponents, options: Partial<Libp2pStateReplicatorOpts> = {}) {
+	constructor(components: CRDTSynchronizerComponents, options: Partial<CRDTSynchronizerOpts> = {}) {
 		this.options = {
-			protocol: options.protocol ?? "/libp2p-state-replication/0.0.1"
+			protocol: options.protocol ?? "/libp2p-crdt-synchronizer/0.0.1"
 		};
 
 		this.components = components;
@@ -160,4 +160,4 @@ export class Libp2pStateReplicator {
 	}
 }
 
-export const createLibp2pStateReplicator = (options: Partial<Libp2pStateReplicatorOpts>) => (components: Libp2pStateReplicatorComponents) => new Libp2pStateReplicator(components, options);
+export const createCRDTSynchronizer = (options: Partial<CRDTSynchronizerOpts>) => (components: CRDTSynchronizerComponents) => new CRDTSynchronizer(components, options);

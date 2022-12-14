@@ -1,3 +1,3 @@
-# typescript-template
+# libp2p-crdt-synchronizer
 
-A template for NodeJS projects using typescript.
+A CRDT synchronizer for Libp2p.

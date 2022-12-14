@@ -1,1 +1,1 @@
-export { Libp2pStateReplicator, createLibp2pStateReplicator } from "./Libp2pStateReplicator.js";
+export { CRDTSynchronizer, createCRDTSynchronizer } from "./CRDTSynchronizer.js";

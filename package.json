@@ -1,6 +1,6 @@
 {
   "type": "module",
-  "name": "libp2p-state-replicator",
+  "name": "libp2p-crdt-synchronizer",
   "version": "1.0.0",
   "description": "A template for NodeJS projects using typescript.",
   "main": "dist/index.js",
