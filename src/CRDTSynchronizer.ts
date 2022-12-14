@@ -15,7 +15,7 @@ export interface CRDTSynchronizerOpts {
 
 export interface CRDTSynchronizerComponents {
 	connectionManager: ConnectionManager
-	registrar: Registrar,
+	registrar: Registrar
 	pubsub?: PubSub
 }
 
@@ -74,11 +74,11 @@ export class CRDTSynchronizer {
 			}
 
 			for (const [name, crdt] of this.crdts) {
-				let sync = crdt.sync(undefined, { id: connection.remotePeer.toBytes() });
+				const messageId = this.genMsgId();
+				const peerId = connection.remotePeer.toBytes();
+				let sync = crdt.sync(undefined, { id: peerId, syncId: messageId });
 
 				while (sync != null) {
-					const messageId = this.genMsgId();
-
 					writer.push(SyncProtocol.encode({
 						name,
 						data: sync ?? new Uint8Array([]),
@@ -95,7 +95,7 @@ export class CRDTSynchronizer {
 						break;
 					}
 
-					sync = crdt.sync(response.data, { id: connection.remotePeer.toBytes() });
+					sync = crdt.sync(response.data, { id: peerId, syncId: messageId });
 				}
 			}
 		}
@@ -110,7 +110,7 @@ export class CRDTSynchronizer {
 		let response: Uint8Array = new Uint8Array();
 
 		if (crdt != null && message.data.length !== 0) {
-			response = crdt.sync(message.data, { id: peerId.toBytes() }) ?? new Uint8Array();
+			response = crdt.sync(message.data, { id: peerId.toBytes(), syncId: message.id }) ?? new Uint8Array();
 		}
 
 		return SyncProtocol.encode({
