@@ -4,7 +4,7 @@ import type { PubSub } from "@libp2p/interface-pubsub";
 import type { Connection, Stream } from "@libp2p/interface-connection";
 import type { PeerId } from "@libp2p/interface-peer-id";
 import type { CRDT } from "crdt-interfaces";
-import { CRDTSynchronizer as SyncProtocol } from "crdt-protocols/synchronizer";
+import { CRDTSyncMessage } from "./CRDTSyncProtocol.js";
 import * as lp from "it-length-prefixed";
 import { pipe } from "it-pipe";
 import { pushable, Pushable } from "it-pushable";
@@ -24,7 +24,7 @@ export class CRDTSynchronizer {
 	private readonly crdts = new Map<string, CRDT>();
 	private readonly components: CRDTSynchronizerComponents;
 	private readonly writers = new Map<string, Pushable<Uint8Array>>();
-	private readonly msgPromises = new Map<number, (value: SyncProtocol) => void>();
+	private readonly msgPromises = new Map<number, (value: CRDTSyncMessage) => void>();
 
 	private readonly genMsgId = (() => {
 		let id = 0;
@@ -79,14 +79,14 @@ export class CRDTSynchronizer {
 				let sync = crdt.sync(undefined, { id: peerId, syncId: messageId });
 
 				while (sync != null) {
-					writer.push(SyncProtocol.encode({
+					writer.push(CRDTSyncMessage.encode({
 						name,
 						data: sync ?? new Uint8Array([]),
 						id: messageId,
 						request: true
 					}));
 
-					const response = await new Promise((resolve: (value: SyncProtocol) => void) => {
+					const response = await new Promise((resolve: (value: CRDTSyncMessage) => void) => {
 						this.msgPromises.set(messageId, resolve);
 					});
 
@@ -105,7 +105,7 @@ export class CRDTSynchronizer {
 		return this.crdts.get(name);
 	}
 
-	private handleSync (message: SyncProtocol, peerId: PeerId): Uint8Array {
+	private handleSync (message: CRDTSyncMessage, peerId: PeerId): Uint8Array {
 		const crdt = this.crdts.get(message.name);
 		let response: Uint8Array = new Uint8Array();
 
@@ -113,7 +113,7 @@ export class CRDTSynchronizer {
 			response = crdt.sync(message.data, { id: peerId.toBytes(), syncId: message.id }) ?? new Uint8Array();
 		}
 
-		return SyncProtocol.encode({
+		return CRDTSyncMessage.encode({
 			name: message.name,
 			data: response,
 			id: message.id
@@ -127,7 +127,7 @@ export class CRDTSynchronizer {
 		// Handle inputs.
 		pipe(stream, lp.decode(), async function (source) {
 			for await (const message of source) {
-				const data = SyncProtocol.decode(message);
+				const data = CRDTSyncMessage.decode(message);
 
 				if (data.request === true) {
 					const response = that.handleSync(data, connection.remotePeer);
