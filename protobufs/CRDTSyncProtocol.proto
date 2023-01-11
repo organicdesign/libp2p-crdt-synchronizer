@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+message CRDTSyncMessage {
+	string name = 1;
+	bytes data = 2;
+	uint32 id = 3;
+	optional bool request = 4;
+}
