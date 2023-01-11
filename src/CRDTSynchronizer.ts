@@ -165,4 +165,4 @@ export class CRDTSynchronizer {
 	}
 }
 
-export const createCRDTSynchronizer = (options: Partial<CRDTSynchronizerOpts>) => (components: CRDTSynchronizerComponents) => new CRDTSynchronizer(components, options);
+export const createCRDTSynchronizer = (options?: Partial<CRDTSynchronizerOpts>) => (components: CRDTSynchronizerComponents) => new CRDTSynchronizer(components, options);
