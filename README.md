@@ -30,7 +30,7 @@ console.log(synchronizer.getCRDT("my-crdt").toValue());
 await synchronizer.stop();
 ```
 
-Any crdt should work if it follows the `CRDT` interface from `@organicdesign/crdt-interfaces` and all instances of your network are using the same CRDT under each name. You can also use one of the CRDT implementations from `@organicdesign/crdts`.
+Any crdt should work if it follows the `CRDT` interface from `@organicdesign/crdt-interfaces` and all instances in your network are using the same CRDT under each name. You can also use one of the CRDT implementations from `@organicdesign/crdts`.
 
 `options` is an optional object with the following properties:
 - `protocol`: A string which specifies the name of the protocol to sync crdts over. Defaults to `"/libp2p-crdt-synchronizer/0.0.1"`.
