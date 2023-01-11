@@ -35,7 +35,6 @@
   },
   "dependencies": {
     "crdt-protocols": "git+ssh://git@code.organicdesign.nz:222/organicdesign/crdt-protocols.git",
-    "distributed-state-synchronizer": "git+ssh://git@code.organicdesign.nz:222/organicdesign/distributed-state-synchronizer.git",
     "it-length-prefixed": "^8.0.3",
     "it-pair": "^2.0.3",
     "it-pipe": "^2.0.4",
