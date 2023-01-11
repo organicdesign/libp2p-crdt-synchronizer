@@ -11,6 +11,8 @@ import { CRDTSyncMessage } from "./CRDTSyncProtocol.js";
 
 export interface CRDTSynchronizerOpts {
 	protocol: string
+	interval: number
+	autoSync: boolean
 }
 
 export interface CRDTSynchronizerComponents {
@@ -20,6 +22,7 @@ export interface CRDTSynchronizerComponents {
 }
 
 export class CRDTSynchronizer {
+	private interval: ReturnType<typeof setInterval>;
 	private readonly options: CRDTSynchronizerOpts;
 	private readonly crdts = new Map<string, CRDT>();
 	private readonly components: CRDTSynchronizerComponents;
@@ -42,7 +45,9 @@ export class CRDTSynchronizer {
 
 	constructor(components: CRDTSynchronizerComponents, options: Partial<CRDTSynchronizerOpts> = {}) {
 		this.options = {
-			protocol: options.protocol ?? "/libp2p-crdt-synchronizer/0.0.1"
+			protocol: options.protocol ?? "/libp2p-crdt-synchronizer/0.0.1",
+			interval: options.interval ?? 1000 * 60 * 2,
+			autoSync: options.autoSync ?? true
 		};
 
 		this.components = components;
@@ -52,6 +57,16 @@ export class CRDTSynchronizer {
 		this.components.registrar.handle(this.options.protocol, async ({ stream, connection }) => {
 			this.handleStream(stream, connection);
 		});
+
+		if (this.options.autoSync) {
+			this.interval = setInterval(() => this.sync(), this.options.interval);
+		}
+	}
+
+	async stop () {
+		clearInterval(this.interval);
+
+		await this.components.registrar.unhandle(this.options.protocol);
 	}
 
 	async sync () {
