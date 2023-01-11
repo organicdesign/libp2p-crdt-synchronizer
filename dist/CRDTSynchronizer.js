@@ -26,7 +26,7 @@ export class CRDTSynchronizer {
         this.crdts.set(name, crdt);
     }
     constructor(components, options = {}) {
-        var _a;
+        var _a, _b, _c;
         this.crdts = new Map();
         this.writers = new Map();
         this.msgPromises = new Map();
@@ -35,7 +35,9 @@ export class CRDTSynchronizer {
             return () => id++;
         })();
         this.options = {
-            protocol: (_a = options.protocol) !== null && _a !== void 0 ? _a : "/libp2p-crdt-synchronizer/0.0.1"
+            protocol: (_a = options.protocol) !== null && _a !== void 0 ? _a : "/libp2p-crdt-synchronizer/0.0.1",
+            interval: (_b = options.interval) !== null && _b !== void 0 ? _b : 1000 * 60 * 2,
+            autoSync: (_c = options.autoSync) !== null && _c !== void 0 ? _c : true
         };
         this.components = components;
     }
@@ -43,6 +45,15 @@ export class CRDTSynchronizer {
         this.components.registrar.handle(this.options.protocol, ({ stream, connection }) => __awaiter(this, void 0, void 0, function* () {
             this.handleStream(stream, connection);
         }));
+        if (this.options.autoSync) {
+            this.interval = setInterval(() => this.sync(), this.options.interval);
+        }
+    }
+    stop() {
+        return __awaiter(this, void 0, void 0, function* () {
+            clearInterval(this.interval);
+            yield this.components.registrar.unhandle(this.options.protocol);
+        });
     }
     sync() {
         return __awaiter(this, void 0, void 0, function* () {

@@ -1,1 +1,1 @@
-export { CRDTSynchronizer, createCRDTSynchronizer } from "./CRDTSynchronizer.js";
+export * from "./CRDTSynchronizer.js";
