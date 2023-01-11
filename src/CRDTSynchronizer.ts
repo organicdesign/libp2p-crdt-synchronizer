@@ -3,11 +3,11 @@ import type { Registrar } from "@libp2p/interface-registrar";
 import type { PubSub } from "@libp2p/interface-pubsub";
 import type { Connection, Stream } from "@libp2p/interface-connection";
 import type { PeerId } from "@libp2p/interface-peer-id";
-import type { CRDT } from "crdt-interfaces";
-import { CRDTSyncMessage } from "./CRDTSyncProtocol.js";
+import type { CRDT } from "@organicdesign/crdt-interfaces";
 import * as lp from "it-length-prefixed";
 import { pipe } from "it-pipe";
 import { pushable, Pushable } from "it-pushable";
+import { CRDTSyncMessage } from "./CRDTSyncProtocol.js";
 
 export interface CRDTSynchronizerOpts {
 	protocol: string
