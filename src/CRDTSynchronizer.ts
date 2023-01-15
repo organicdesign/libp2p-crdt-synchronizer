@@ -53,7 +53,7 @@ export class CRDTSynchronizer {
 		this.components = components;
 	}
 
-	start () {
+	async start () {
 		this.components.registrar.handle(this.options.protocol, async ({ stream, connection }) => {
 			this.handleStream(stream, connection);
 		});
