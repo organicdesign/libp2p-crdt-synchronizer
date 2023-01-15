@@ -1,7 +1,4 @@
-import type { ConnectionManager } from "@libp2p/interface-connection-manager";
-import type { Registrar } from "@libp2p/interface-registrar";
 import type { PubSub } from "@libp2p/interface-pubsub";
-import type { Connection, Stream } from "@libp2p/interface-connection";
 import type { PeerId } from "@libp2p/interface-peer-id";
 import type { CRDT } from "@organicdesign/crdt-interfaces";
 import {
@@ -10,9 +7,6 @@ import {
 	MessageHandlerComponents,
 	MessageHandlerOpts
 } from "@organicdesign/libp2p-message-handler";
-import * as lp from "it-length-prefixed";
-import { pipe } from "it-pipe";
-import { pushable, Pushable } from "it-pushable";
 import { CRDTSyncMessage } from "./CRDTSyncProtocol.js";
 
 export interface CRDTSynchronizerOpts extends MessageHandlerOpts {
@@ -29,7 +23,6 @@ export class CRDTSynchronizer {
 	private readonly options: CRDTSynchronizerOpts;
 	private readonly crdts = new Map<string, CRDT>();
 	private readonly components: CRDTSynchronizerComponents;
-	private readonly writers = new Map<string, Pushable<Uint8Array>>();
 	private readonly msgPromises = new Map<number, (value: CRDTSyncMessage) => void>();
 	private readonly handler: MessageHandler;
 
