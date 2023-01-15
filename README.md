@@ -114,3 +114,4 @@ Get a list of CRDT names.
 ## TODO
 
 - [ ] Add tests.
+- [ ] Add logging.
