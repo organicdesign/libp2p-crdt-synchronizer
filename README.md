@@ -99,7 +99,7 @@ synchronizer.sync();
 
 - Returns: `<Promise>`
 
-Manually run synchronization with all connected peers. Resolves when completed. It is not nessary to call this if `autoSync` in the options is enabled but may still be called if synchronization is needed on demand.
+Manually run synchronization with all connected peers. Resolves when completed. It is not necessary to call this if `autoSync` in the options is enabled but may still be called if synchronization is needed on demand.
 
 ### synchronizer.CRDTNames
 
