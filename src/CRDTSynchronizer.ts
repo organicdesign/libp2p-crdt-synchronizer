@@ -4,20 +4,23 @@ import type { PubSub } from "@libp2p/interface-pubsub";
 import type { Connection, Stream } from "@libp2p/interface-connection";
 import type { PeerId } from "@libp2p/interface-peer-id";
 import type { CRDT } from "@organicdesign/crdt-interfaces";
+import {
+	createMessageHandler,
+	MessageHandler,
+	MessageHandlerComponents,
+	MessageHandlerOpts
+} from "@organicdesign/libp2p-message-handler";
 import * as lp from "it-length-prefixed";
 import { pipe } from "it-pipe";
 import { pushable, Pushable } from "it-pushable";
 import { CRDTSyncMessage } from "./CRDTSyncProtocol.js";
 
-export interface CRDTSynchronizerOpts {
-	protocol: string
+export interface CRDTSynchronizerOpts extends MessageHandlerOpts {
 	interval: number
 	autoSync: boolean
 }
 
-export interface CRDTSynchronizerComponents {
-	connectionManager: ConnectionManager
-	registrar: Registrar
+export interface CRDTSynchronizerComponents extends MessageHandlerComponents {
 	pubsub?: PubSub
 }
 
@@ -28,6 +31,7 @@ export class CRDTSynchronizer {
 	private readonly components: CRDTSynchronizerComponents;
 	private readonly writers = new Map<string, Pushable<Uint8Array>>();
 	private readonly msgPromises = new Map<number, (value: CRDTSyncMessage) => void>();
+	private readonly handler: MessageHandler;
 
 	private readonly genMsgId = (() => {
 		let id = 0;
@@ -51,12 +55,14 @@ export class CRDTSynchronizer {
 		};
 
 		this.components = components;
+
+		this.handler = createMessageHandler(options)(components);
+
+		this.handler.handle((message, peerId) => this.handleMessage(message, peerId));
 	}
 
 	async start () {
-		this.components.registrar.handle(this.options.protocol, async ({ stream, connection }) => {
-			this.handleStream(stream, connection);
-		});
+		await this.handler.start();
 
 		if (this.options.autoSync) {
 			this.interval = setInterval(() => this.sync(), this.options.interval);
@@ -66,40 +72,30 @@ export class CRDTSynchronizer {
 	async stop () {
 		clearInterval(this.interval);
 
-		await this.components.registrar.unhandle(this.options.protocol);
+		await this.handler.stop();
 	}
 
 	async sync () {
 		const connections = this.components.connectionManager.getConnections();
 
 		for (const connection of connections) {
-			// Only open a new stream if we don't already have on open.
-			if (!this.writers.has(connection.remotePeer.toString())) {
-				// This will throw if the node does not support this protocol
-				const stream = await connection.newStream(this.options.protocol);
-
-				this.handleStream(stream, connection);
-			}
-
-			const writer = this.writers.get(connection.remotePeer.toString());
-
-			if (writer == null) {
-				console.warn("not connected");
-				continue;
-			}
-
 			for (const [name, crdt] of this.crdts) {
 				const messageId = this.genMsgId();
-				const peerId = connection.remotePeer.toBytes();
-				let sync = crdt.sync(undefined, { id: peerId, syncId: messageId });
+				const peerId = connection.remotePeer;
+				let sync = crdt.sync(undefined, { id: peerId.toBytes(), syncId: messageId });
 
 				while (sync != null) {
-					writer.push(CRDTSyncMessage.encode({
-						name,
-						data: sync ?? new Uint8Array([]),
-						id: messageId,
-						request: true
-					}));
+					try {
+						await this.handler.send(CRDTSyncMessage.encode({
+							name,
+							data: sync ?? new Uint8Array([]),
+							id: messageId,
+							request: true
+						}), peerId);
+					} catch (error) {
+						console.warn(`sync failed for ${name}`);
+						break;
+					}
 
 					const response = await new Promise((resolve: (value: CRDTSyncMessage) => void) => {
 						this.msgPromises.set(messageId, resolve);
@@ -110,7 +106,7 @@ export class CRDTSynchronizer {
 						break;
 					}
 
-					sync = crdt.sync(response.data, { id: peerId, syncId: messageId });
+					sync = crdt.sync(response.data, { id: peerId.toBytes(), syncId: messageId });
 				}
 			}
 		}
@@ -120,7 +116,21 @@ export class CRDTSynchronizer {
 		return this.crdts.get(name);
 	}
 
-	private handleSync (message: CRDTSyncMessage, peerId: PeerId): Uint8Array {
+	private async handleMessage (message: Uint8Array, peerId: PeerId): Promise<void> {
+		const data = CRDTSyncMessage.decode(message);
+
+		if (data.request === true) {
+			await this.handleSync(data, peerId);
+		} else {
+			// Resolve promise.
+			const resolver = this.msgPromises.get(data.id);
+
+			this.msgPromises.delete(data.id);
+			resolver?.(data);
+		}
+	}
+
+	private async handleSync (message: CRDTSyncMessage, peerId: PeerId): Promise<void> {
 		const crdt = this.crdts.get(message.name);
 		let response: Uint8Array = new Uint8Array();
 
@@ -128,55 +138,13 @@ export class CRDTSynchronizer {
 			response = crdt.sync(message.data, { id: peerId.toBytes(), syncId: message.id }) ?? new Uint8Array();
 		}
 
-		return CRDTSyncMessage.encode({
+		const newMessage = CRDTSyncMessage.encode({
 			name: message.name,
 			data: response,
 			id: message.id
 		});
-	}
 
-	private handleStream (stream: Stream, connection: Connection) {
-		const that = this;
-		const peerId = connection.remotePeer.toString();
-
-		// Handle inputs.
-		pipe(stream, lp.decode(), async function (source) {
-			for await (const message of source) {
-				const data = CRDTSyncMessage.decode(message);
-
-				if (data.request === true) {
-					const response = that.handleSync(data, connection.remotePeer);
-					const writer = that.writers.get(peerId.toString());
-
-					writer?.push(response);
-				} else {
-					const resolver = that.msgPromises.get(data.id);
-
-					that.msgPromises.delete(data.id);
-					resolver?.(data);
-				}
-			}
-		}).catch(() => {
-			// Do nothing
-		});
-
-		// Don't pipe events through the same connection
-		if (this.writers.has(peerId)) {
-			return;
-		}
-
-		const writer = pushable();
-
-		this.writers.set(peerId, writer);
-
-		// Handle outputs.
-		(async () => {
-			try {
-				await pipe(writer, lp.encode(), stream);
-			} finally {
-				this.writers.delete(peerId);
-			}
-		})();
+		await this.handler.send(newMessage, peerId);
 	}
 }
 
