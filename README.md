@@ -2,6 +2,21 @@
 
 A CRDT synchronizer for Libp2p.
 
+## Table of Contents
+
+- [Install](#install)
+- [Usage](#usage)
+- [API](#api)
+  - [createCRDTSynchronizer](#createcrdtsynchronizer)
+  - [CRDTSynchronizer](#crdtsynchronizer)
+    - [start](#start)
+    - [stop](#stop)
+    - [setCRDT](#setcrdt)
+    - [getCRDT](#getcrdt)
+    - [sync](#sync)
+    - [CRDTNames](#crdtnames)
+- [TODO](#todo)
+
 ## install
 
 ```
@@ -34,7 +49,7 @@ Any crdt should work if it follows the `CRDT` interface from `@organicdesign/crd
 
 ## API
 
-### createCRDTSynchronizer([options])(libp2p)
+### createCRDTSynchronizer
 
 ```javascript
 createCRDTSynchronizer([options])(libp2p);
@@ -49,30 +64,44 @@ createCRDTSynchronizer([options])(libp2p);
 
 Creates a Libp2p message handler
 
-### synchronizer.start()
+### CRDTSynchronizer
 
 ```javascript
-synchronizer.start();
+new CRDTSynchronizer(libp2p, [options]);
+```
+
+- `options` `<Object>` An optional object with the following properties:
+  - `protocol` `<string>` Specifies the name of the protocol to sync crdts over. Default: `"/libp2p-crdt-synchronizer/0.0.1"`.
+  - `autoSync` `<boolean>` Enables auto sync. Default: `true`.
+  - `interval` `<integer>` Specifies the interval to sync the crdts. Requires autoSync to be enabled. Default: `120000` (2 minutes).
+- `libp2p` `<Libp2p>` The libp2p instance.
+
+The CRDTSynchronizer class. It is not recommended to instanciate it directly but rather use the `createCRDTSynchronizer` function.
+
+#### start
+
+```javascript
+crdtSynchronizer.start();
 ```
 
 - Returns: `<Promise>`
 
 Start the synchronizer, resolves when it has finished starting.
 
-### synchronizer.stop()
+#### stop
 
 ```javascript
-synchronizer.stop();
+crdtSynchronizer.stop();
 ```
 
 - Returns: `<Promise>`
 
 Stop the synchronizer, resolves when it has finished stopping.
 
-### synchronizer.setCRDT(name, crdt)
+#### setCRDT
 
 ```javascript
-synchronizer.setCRDT(name, crdt);
+crdtSynchronizer.setCRDT(name, crdt);
 ```
 
 - `name` `<string>` The name to store the CRDT under.
@@ -80,10 +109,10 @@ synchronizer.setCRDT(name, crdt);
 
 Add a CRDT to the synchronizer under a name.
 
-### synchronizer.getCRDT(name)
+#### getCRDT
 
 ```javascript
-synchronizer.getCRDT(name);
+crdtSynchronizer.getCRDT(name);
 ```
 
 - `name` `<string>` The name to get the CRDT by.
@@ -91,20 +120,20 @@ synchronizer.getCRDT(name);
 
 Get a CRDT from the synchronizer by name.
 
-### synchronizer.sync()
+#### sync
 
 ```javascript
-synchronizer.sync();
+crdtSynchronizer.sync();
 ```
 
 - Returns: `<Promise>`
 
 Manually run synchronization with all connected peers. Resolves when completed. It is not necessary to call this if `autoSync` in the options is enabled but may still be called if synchronization is needed on demand.
 
-### synchronizer.CRDTNames
+#### CRDTNames
 
 ```javascript
-synchronizer.CRDTNames;
+crdtSynchronizer.CRDTNames;
 ```
 
 - Type `<string[]>` The list names with CRDTs assigned to them.
