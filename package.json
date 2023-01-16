@@ -3,6 +3,7 @@
   "name": "@organicdesign/libp2p-crdt-synchronizer",
   "version": "0.1.2",
   "description": "A CRDT synchronizer for Libp2p.",
+  "keywords": ["libp2p", "crdt"],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
