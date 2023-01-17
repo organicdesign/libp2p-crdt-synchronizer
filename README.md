@@ -15,6 +15,7 @@ A CRDT synchronizer for Libp2p.
     - [getCRDT](#getcrdt)
     - [sync](#sync)
     - [CRDTNames](#crdtnames)
+- [Logging](#logging)
 - [TODO](#todo)
 
 ## install
@@ -140,7 +141,26 @@ crdtSynchronizer.CRDTNames;
 
 Get a list of CRDT names.
 
+## Logging
+
+The logger has the following namespaces:
+
+* `libp2p:crdt-synchronizer:general` - Logs general actions like starting, stopping and sync.
+* `libp2p:crdt-synchronizer:peers` - Logs individual peer sync cycles.
+* `libp2p:crdt-synchronizer:crdts` - Logs individual CRDT sync cycles.
+
+To enable logging in nodejs add the following environment variable (by prefixing the start command):
+
+```
+DEBUG=libp2p:crdt-synchronizer:*
+```
+
+Or in the browser:
+
+```javascript
+localStorage.setItem("debug", "libp2p:crdt-synchronizer:*");
+
 ## TODO
 
 - [ ] Add tests.
-- [ ] Add logging.
+- [x] Add logging.
