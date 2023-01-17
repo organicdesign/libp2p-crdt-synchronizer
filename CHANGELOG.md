@@ -1,3 +1,9 @@
+## [0.2.0](https://github.com/organicdesign/libp2p-crdt-synchronizer/compare/v0.1.3...v0.2.0) (2023-01-17)
+
+### Added
+
+* Add logger.
+
 ## [0.1.3](https://github.com/organicdesign/libp2p-crdt-synchronizer/compare/v0.1.2...v0.1.3) (2023-01-17)
 
 ### Added
