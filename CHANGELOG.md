@@ -1,3 +1,10 @@
+## [0.1.3](https://github.com/organicdesign/libp2p-crdt-synchronizer/compare/v0.1.2...v0.1.3) (2023-01-17)
+
+### Added
+
+* Add keywords to package.json.
+* Add table of contents to readme.
+
 ## [0.1.2](https://github.com/organicdesign/libp2p-crdt-synchronizer/compare/v0.1.1...v0.1.2) (2023-01-16)
 
 ### Fixed
