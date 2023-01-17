@@ -159,6 +159,7 @@ Or in the browser:
 
 ```javascript
 localStorage.setItem("debug", "libp2p:crdt-synchronizer:*");
+```
 
 ## TODO
 
