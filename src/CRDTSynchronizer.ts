@@ -63,7 +63,7 @@ export class CRDTSynchronizer implements Startable {
 		this.handler.handle((message, peerId) => this.handleMessage(message, peerId));
 	}
 
-	async start () {
+	async start (): Promise<void> {
 		await this.handler.start();
 
 		if (this.options.autoSync) {
@@ -75,7 +75,7 @@ export class CRDTSynchronizer implements Startable {
 		log.general("started");
 	}
 
-	async stop () {
+	async stop (): Promise<void> {
 		clearInterval(this.interval);
 
 		await this.handler.stop();
@@ -85,11 +85,11 @@ export class CRDTSynchronizer implements Startable {
 		log.general("stopped");
 	}
 
-	isStarted () {
+	isStarted (): boolean {
 		return this.started;
 	}
 
-	async sync () {
+	async sync (): Promise<void> {
 		log.general("synchronizing with connected peers");
 
 		const connections = this.components.connectionManager.getConnections();
