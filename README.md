@@ -16,7 +16,8 @@ A CRDT synchronizer for Libp2p.
     - [sync](#sync)
     - [CRDTNames](#crdtnames)
 - [Logging](#logging)
-- [TODO](#todo)
+- [Tests](#tests)
+- [To-Do](#to-do)
 
 ## install
 
@@ -161,7 +162,15 @@ Or in the browser:
 localStorage.setItem("debug", "libp2p:crdt-synchronizer*");
 ```
 
-## TODO
+## Tests
+
+To run the test suite:
+
+```
+npm run test
+```
+
+## To-Do
 
 - [ ] Add tests.
 - [x] Add logging.
