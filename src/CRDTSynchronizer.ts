@@ -64,6 +64,10 @@ export class CRDTSynchronizer implements Startable {
 	}
 
 	async start (): Promise<void> {
+		if (this.isStarted()) {
+			return;
+		}
+
 		await this.handler.start();
 
 		if (this.options.autoSync) {
@@ -76,6 +80,10 @@ export class CRDTSynchronizer implements Startable {
 	}
 
 	async stop (): Promise<void> {
+		if (!this.isStarted()) {
+			return;
+		}
+
 		clearInterval(this.interval);
 
 		await this.handler.stop();
