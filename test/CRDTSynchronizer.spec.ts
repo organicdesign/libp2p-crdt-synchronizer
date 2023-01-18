@@ -51,39 +51,44 @@ const mockCRDT = (() => {
 	};
 })();
 
-let synchronizer: CRDTSynchronizer, components: CRDTSynchronizerComponents & { peerId: PeerId };
+let localSynchronizer: CRDTSynchronizer;
+let remoteSynchronizer: CRDTSynchronizer;
+let localComponents: CRDTSynchronizerComponents & { peerId: PeerId };
+let remoteComponents: CRDTSynchronizerComponents & { peerId: PeerId };
 
 beforeEach(async () => {
-	components = await createComponents();
-	synchronizer = createCRDTSynchronizer({ autoSync: false })(components);
+	localComponents = await createComponents();
+	localSynchronizer = createCRDTSynchronizer({ autoSync: false })(localComponents);
+	remoteComponents = await createComponents();
+	remoteSynchronizer = createCRDTSynchronizer({ autoSync: false })(remoteComponents);
 });
 
 describe("startable interface", () => {
 	it("is not started after creation", async () => {
-		expect(synchronizer.isStarted()).toBe(false);
+		expect(localSynchronizer.isStarted()).toBe(false);
 	});
 
 	it("starts", async () => {
-		await synchronizer.start();
+		await localSynchronizer.start();
 
-		expect(synchronizer.isStarted()).toBe(true);
+		expect(localSynchronizer.isStarted()).toBe(true);
 	});
 
 	it("stops", async () => {
-		await synchronizer.start();
-		await synchronizer.stop();
+		await localSynchronizer.start();
+		await localSynchronizer.stop();
 
-		expect(synchronizer.isStarted()).toBe(false);
+		expect(localSynchronizer.isStarted()).toBe(false);
 	});
 });
 
 describe("crdts", () => {
 	beforeEach(async () => {
-		await synchronizer.start();
+		await localSynchronizer.start();
 	});
 
 	afterEach(async () => {
-		await synchronizer.stop();
+		await localSynchronizer.stop();
 	});
 
 	it("sets and gets crdts", () => {
@@ -92,9 +97,9 @@ describe("crdts", () => {
 		for (const key of keys) {
 			const crdt = mockCRDT();
 
-			synchronizer.setCRDT(key, crdt);
+			localSynchronizer.setCRDT(key, crdt);
 
-			expect(synchronizer.getCRDT(key)).toStrictEqual(crdt);
+			expect(localSynchronizer.getCRDT(key)).toStrictEqual(crdt);
 		}
 	});
 
@@ -102,37 +107,35 @@ describe("crdts", () => {
 		const keys = ["test-1", "test-2", "test-3"];
 
 		for (const key of keys) {
-			synchronizer.setCRDT(key, mockCRDT());
+			localSynchronizer.setCRDT(key, mockCRDT());
 		}
 
-		expect(synchronizer.CRDTNames).toStrictEqual(keys);
+		expect(localSynchronizer.CRDTNames).toStrictEqual(keys);
 	});
 });
 
 describe("synchronization", () => {
 	beforeEach(async () => {
-		await synchronizer.start();
+		await localSynchronizer.start();
+		await remoteSynchronizer.start();
+
+		await remoteComponents.connectionManager.openConnection(localComponents.peerId);
 	});
 
 	afterEach(async () => {
-		await synchronizer.stop();
+		await localSynchronizer.stop();
+		await remoteSynchronizer.stop();
 	});
 
 	it("synchronizes crdts", async () => {
-		const remote = await createComponents();
-		const remoteSynchronizer = createCRDTSynchronizer({ autoSync: false })(remote);
 		const crdt1 = mockCRDT();
 		const crdt2 = mockCRDT();
 
-		synchronizer.setCRDT("crdt", crdt1);
+		localSynchronizer.setCRDT("crdt", crdt1);
 		remoteSynchronizer.setCRDT("crdt", crdt2);
 
-		await remote.connectionManager.openConnection(components.peerId);
-
-		await remoteSynchronizer.start();
-
 		await remoteSynchronizer.sync();
-		await synchronizer.sync();
+		await localSynchronizer.sync();
 
 		expect(crdt1.toValue()).toStrictEqual(crdt2.toValue());
 	});
