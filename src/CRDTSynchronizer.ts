@@ -12,7 +12,7 @@ import { logger } from "@libp2p/logger";
 import { CRDTSyncMessage } from "./CRDTSyncProtocol.js";
 
 const log = {
-	general: logger("libp2p:crdt-synchronizer:general"),
+	general: logger("libp2p:crdt-synchronizer"),
 	peers: logger("libp2p:crdt-synchronizer:peers"),
 	crdts: logger("libp2p:crdt-synchronizer:crdts")
 };
