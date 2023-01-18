@@ -1,3 +1,22 @@
+## [0.2.2](https://github.com/organicdesign/libp2p-crdt-synchronizer/compare/v0.2.1...v0.2.2) (2023-01-19)
+
+### Added
+
+* Implmented the startable interface.
+* Tests:
+  * Starable interface.
+  * CRDT getting/setting.
+  * Synchronization.
+
+### Changed
+
+* Changed the general logger namespace.
+
+### Fixed
+
+* Fix multiple start calls throwing errors.
+* Fix dynamic return type of public methods.
+
 ## [0.2.1](https://github.com/organicdesign/libp2p-crdt-synchronizer/compare/v0.2.0...v0.2.1) (2023-01-17)
 
 ### Fixed

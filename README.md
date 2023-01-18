@@ -172,5 +172,5 @@ npm run test
 
 ## To-Do
 
-- [ ] Add tests.
+- [x] Add tests.
 - [x] Add logging.
