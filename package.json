@@ -45,7 +45,7 @@
   },
   "dependencies": {
     "@libp2p/logger": "^2.0.5",
-    "@organicdesign/libp2p-message-handler": "^0.1.0",
+    "@organicdesign/libp2p-message-handler": "^0.3.2",
     "protons-runtime": "^4.0.1"
   }
 }
