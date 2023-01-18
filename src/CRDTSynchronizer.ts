@@ -1,5 +1,6 @@
 import type { PubSub } from "@libp2p/interface-pubsub";
 import type { PeerId } from "@libp2p/interface-peer-id";
+import type { Startable } from "@libp2p/interfaces/startable";
 import type { CRDT } from "@organicdesign/crdt-interfaces";
 import {
 	createMessageHandler,
@@ -25,13 +26,14 @@ export interface CRDTSynchronizerComponents extends MessageHandlerComponents {
 	pubsub?: PubSub
 }
 
-export class CRDTSynchronizer {
+export class CRDTSynchronizer implements Startable {
 	private interval: ReturnType<typeof setInterval>;
 	private readonly options: CRDTSynchronizerOpts;
 	private readonly crdts = new Map<string, CRDT>();
 	private readonly components: CRDTSynchronizerComponents;
 	private readonly msgPromises = new Map<number, (value: CRDTSyncMessage) => void>();
 	private readonly handler: MessageHandler;
+	private started = false;
 
 	private readonly genMsgId = (() => {
 		let id = 0;
@@ -68,6 +70,8 @@ export class CRDTSynchronizer {
 			this.interval = setInterval(() => this.sync(), this.options.interval);
 		}
 
+		this.started = true;
+
 		log.general("started");
 	}
 
@@ -76,7 +80,13 @@ export class CRDTSynchronizer {
 
 		await this.handler.stop();
 
+		this.started = false;
+
 		log.general("stopped");
+	}
+
+	isStarted () {
+		return this.started;
 	}
 
 	async sync () {
