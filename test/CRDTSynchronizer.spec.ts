@@ -23,17 +23,33 @@ const createComponents = async (): Promise<CRDTSynchronizerComponents & { peerId
 	return components;
 };
 
-const mockCRDT = (): CRDT => {
-	return {
-		id: new Uint8Array(),
+const mockCRDT = (() => {
+	let i = 0;
 
-		sync (): Uint8Array {
-			return new Uint8Array();
-		},
+	return (): CRDT => {
+		i++;
 
-		toValue () {}
+		let state = new Uint8Array([i, i, i]);
+
+		return {
+			id: new Uint8Array([i]),
+
+			sync (data): Uint8Array | undefined {
+				if (data == null) {
+					return state;
+				}
+
+				if (data[0] > state[0]) {
+					state = data;
+				}
+			},
+
+			toValue () {
+				return state;
+			}
+		} as CRDT;
 	};
-};
+})();
 
 let synchronizer: CRDTSynchronizer, components: CRDTSynchronizerComponents & { peerId: PeerId };
 
@@ -66,6 +82,10 @@ describe("crdts", () => {
 		await synchronizer.start();
 	});
 
+	afterEach(async () => {
+		await synchronizer.stop();
+	});
+
 	it("sets and gets crdts", () => {
 		const keys = ["test-1", "test-2", "test-3"];
 
@@ -86,5 +106,34 @@ describe("crdts", () => {
 		}
 
 		expect(synchronizer.CRDTNames).toStrictEqual(keys);
+	});
+});
+
+describe("synchronization", () => {
+	beforeEach(async () => {
+		await synchronizer.start();
+	});
+
+	afterEach(async () => {
+		await synchronizer.stop();
+	});
+
+	it("synchronizes crdts", async () => {
+		const remote = await createComponents();
+		const remoteSynchronizer = createCRDTSynchronizer({ autoSync: false })(remote);
+		const crdt1 = mockCRDT();
+		const crdt2 = mockCRDT();
+
+		synchronizer.setCRDT("crdt", crdt1);
+		remoteSynchronizer.setCRDT("crdt", crdt2);
+
+		await remote.connectionManager.openConnection(components.peerId);
+
+		await remoteSynchronizer.start();
+
+		await remoteSynchronizer.sync();
+		await synchronizer.sync();
+
+		expect(crdt1.toValue()).toStrictEqual(crdt2.toValue());
 	});
 });
