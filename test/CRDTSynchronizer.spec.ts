@@ -1,5 +1,6 @@
 import type { PeerId } from "@libp2p/interface-peer-id";
 import type { ConnectionManager } from "@libp2p/interface-connection-manager";
+import type { Libp2p } from "@libp2p/interface-libp2p";
 import type { CRDT } from "@organicdesign/crdt-interfaces";
 import { mockRegistrar, mockConnectionManager, mockNetwork } from "@libp2p/interface-mocks";
 import { stubInterface } from "ts-sinon";
@@ -7,18 +8,31 @@ import { start } from "@libp2p/interfaces/startable";
 import { createRSAPeerId } from "@libp2p/peer-id-factory";
 import { CRDTSynchronizerComponents, CRDTSynchronizer, createCRDTSynchronizer } from "../src/CRDTSynchronizer";
 
-const createComponents = async (): Promise<CRDTSynchronizerComponents & { peerId: PeerId }> => {
-	const components: CRDTSynchronizerComponents & { peerId: PeerId } = {
+interface TestCRDTSynchronizerComponents extends CRDTSynchronizerComponents {
+	peerId: PeerId
+	dial: Libp2p["dial"]
+}
+
+const createComponents = async (): Promise<TestCRDTSynchronizerComponents> => {
+	const oldComponents = {
 		peerId: await createRSAPeerId({ bits: 512 }),
 		registrar: mockRegistrar(),
-		connectionManager: stubInterface<ConnectionManager>()
+		connectionManager: stubInterface<ConnectionManager>() as ConnectionManager
 	};
 
-	components.connectionManager = mockConnectionManager(components);
+	oldComponents.connectionManager = mockConnectionManager(oldComponents);
+
+	const components: TestCRDTSynchronizerComponents = {
+		peerId: oldComponents.peerId,
+		dial: (peerId) => oldComponents.connectionManager.openConnection(peerId),
+		handle: (protocol: string, handler) => oldComponents.registrar.handle(protocol, handler),
+		unhandle: (protocol: string) => oldComponents.registrar.unhandle(protocol),
+		getConnections: () => oldComponents.connectionManager.getConnections()
+	};
 
 	await start(...Object.entries(components));
 
-	mockNetwork.addNode(components);
+	mockNetwork.addNode(oldComponents);
 
 	return components;
 };
@@ -53,8 +67,8 @@ const mockCRDT = (() => {
 
 let localSynchronizer: CRDTSynchronizer;
 let remoteSynchronizer: CRDTSynchronizer;
-let localComponents: CRDTSynchronizerComponents & { peerId: PeerId };
-let remoteComponents: CRDTSynchronizerComponents & { peerId: PeerId };
+let localComponents: TestCRDTSynchronizerComponents;
+let remoteComponents: TestCRDTSynchronizerComponents;
 
 beforeEach(async () => {
 	localComponents = await createComponents();
@@ -119,7 +133,7 @@ describe("synchronization", () => {
 		await localSynchronizer.start();
 		await remoteSynchronizer.start();
 
-		await remoteComponents.connectionManager.openConnection(localComponents.peerId);
+		await remoteComponents.dial(localComponents.peerId);
 	});
 
 	afterEach(async () => {
