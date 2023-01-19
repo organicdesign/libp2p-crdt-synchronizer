@@ -100,7 +100,7 @@ export class CRDTSynchronizer implements Startable {
 	async sync (): Promise<void> {
 		log.general("synchronizing with connected peers");
 
-		const connections = this.components.connectionManager.getConnections();
+		const connections = this.components.getConnections();
 
 		for (const connection of connections) {
 			log.peers("synchronizing to peer: %p", connection.remotePeer);
