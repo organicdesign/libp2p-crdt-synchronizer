@@ -1,3 +1,9 @@
+## [0.3.0](https://github.com/organicdesign/libp2p-crdt-synchronizer/compare/v0.2.2...v0.3.0) (2023-01-20)
+
+### Changed
+
+* Updated libp2p-message-handler to 0.4.1.
+
 ## [0.2.2](https://github.com/organicdesign/libp2p-crdt-synchronizer/compare/v0.2.1...v0.2.2) (2023-01-19)
 
 ### Added
