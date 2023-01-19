@@ -8,7 +8,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import { createMessageHandler } from "@organicdesign/libp2p-message-handler";
+import { logger } from "@libp2p/logger";
 import { CRDTSyncMessage } from "./CRDTSyncProtocol.js";
+const log = {
+    general: logger("libp2p:crdt-synchronizer"),
+    peers: logger("libp2p:crdt-synchronizer:peers"),
+    crdts: logger("libp2p:crdt-synchronizer:crdts")
+};
 export class CRDTSynchronizer {
     get CRDTNames() {
         return [...this.crdts.keys()];
@@ -20,6 +26,7 @@ export class CRDTSynchronizer {
         var _a, _b, _c;
         this.crdts = new Map();
         this.msgPromises = new Map();
+        this.started = false;
         this.genMsgId = (() => {
             let id = 0;
             return () => id++;
@@ -35,23 +42,39 @@ export class CRDTSynchronizer {
     }
     start() {
         return __awaiter(this, void 0, void 0, function* () {
+            if (this.isStarted()) {
+                return;
+            }
             yield this.handler.start();
             if (this.options.autoSync) {
                 this.interval = setInterval(() => this.sync(), this.options.interval);
             }
+            this.started = true;
+            log.general("started");
         });
     }
     stop() {
         return __awaiter(this, void 0, void 0, function* () {
+            if (!this.isStarted()) {
+                return;
+            }
             clearInterval(this.interval);
             yield this.handler.stop();
+            this.started = false;
+            log.general("stopped");
         });
+    }
+    isStarted() {
+        return this.started;
     }
     sync() {
         return __awaiter(this, void 0, void 0, function* () {
-            const connections = this.components.connectionManager.getConnections();
+            log.general("synchronizing with connected peers");
+            const connections = this.components.getConnections();
             for (const connection of connections) {
+                log.peers("synchronizing to peer: %p", connection.remotePeer);
                 for (const [name, crdt] of this.crdts) {
+                    log.crdts("synchronizing crdt: %s", name);
                     const messageId = this.genMsgId();
                     const peerId = connection.remotePeer;
                     let sync = crdt.sync(undefined, { id: peerId.toBytes(), syncId: messageId });
@@ -65,7 +88,7 @@ export class CRDTSynchronizer {
                             }), peerId);
                         }
                         catch (error) {
-                            console.warn(`sync failed for ${name}`);
+                            log.general.error("sync failed: %o", error);
                             break;
                         }
                         const response = yield new Promise((resolve) => {
@@ -77,8 +100,11 @@ export class CRDTSynchronizer {
                         }
                         sync = crdt.sync(response.data, { id: peerId.toBytes(), syncId: messageId });
                     }
+                    log.crdts("synchronized crdt: %s", name);
                 }
+                log.peers("synchronized to peer: %p", connection.remotePeer);
             }
+            log.general("synchronized with connected peers");
         });
     }
     getCRDT(name) {
