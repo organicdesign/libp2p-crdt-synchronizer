@@ -1,7 +1,7 @@
 import type { PubSub } from "@libp2p/interface-pubsub";
 import type { PeerId } from "@libp2p/interface-peer-id";
 import type { Startable } from "@libp2p/interfaces/startable";
-import type { CRDT } from "@organicdesign/crdt-interfaces";
+import type { CRDT, CRDTSynchronizer as ICRDTSynchronizer } from "./new-interfaces.js";
 import {
 	createMessageHandler,
 	MessageHandler,
@@ -10,7 +10,7 @@ import {
 } from "@organicdesign/libp2p-message-handler";
 import { logger } from "@libp2p/logger";
 import { Store } from "./Store.js";
-import { isSync, isRequest, isSelect } from "./protocol-helpers.js";
+import { isSync, isRequest } from "./protocol-helpers.js";
 import { SyncMessage, MessageType } from "./CRDTSyncProtocol.js";
 
 const log = {
@@ -130,6 +130,8 @@ export class CRDTSynchronizer implements Startable {
 			for (const [name, crdt] of this.crdts) {
 				log.crdts("synchronizing crdt: %s", name);
 
+
+				// Step 1: Select a CRDT
 				const response = await this.request({
 					type: MessageType.SELECT_CRDT,
 					select: name
@@ -142,8 +144,34 @@ export class CRDTSynchronizer implements Startable {
 
 				log.crdts("remote accepted crdt: %s", name);
 
+				// Step 2: Select a Protocol
+				let synchronizer: ICRDTSynchronizer | undefined;
+
+				for (const protocol of crdt.getProtocols()) {
+					const response = await this.request({
+						type: MessageType.SELECT_PROTOCOL,
+						select: protocol
+					}, peerId);
+
+					if (!response.accept) {
+						log.crdts("remote rejected protocol: %s", protocol);
+						continue;
+					}
+
+					log.crdts("remote accepted protocol: %s", protocol);
+
+					synchronizer = crdt.getSynchronizer(protocol);
+					break;
+				}
+
+				if (synchronizer == null) {
+					log.crdts("no valid protocol found");
+					continue;
+				}
+
+				// Step #3 synchronize
 				const messageId = this.genMsgId();
-				let sync = crdt.sync(undefined, { id: peerId.toBytes(), syncId: messageId });
+				let sync = synchronizer.sync(undefined, { id: peerId.toBytes(), syncId: messageId });
 
 				while (sync != null) {
 					let response: SyncMessage;
@@ -164,7 +192,7 @@ export class CRDTSynchronizer implements Startable {
 						break;
 					}
 
-					sync = crdt.sync(response.sync, { id: peerId.toBytes(), syncId: messageId });
+					sync = synchronizer.sync(response.sync, { id: peerId.toBytes(), syncId: messageId });
 				}
 
 				log.crdts("synchronized crdt: %s", name);
@@ -197,18 +225,16 @@ export class CRDTSynchronizer implements Startable {
 				await this.handleSync(message, peerId);
 				break;
 			case MessageType.SELECT_CRDT:
+			case MessageType.SELECT_PROTOCOL:
 				await this.handleSelect(message, peerId);
 				break;
 			default:
+				log.general.error("recieved unknown message type: %s", message.type);
 				throw new Error(`recieved unknown message type: ${message.type}`);
 		}
 	}
 
 	private async handleSelect (message: SyncMessage, peerId: PeerId): Promise<void> {
-		if (!isSelect(message) || !isRequest(message)) {
-			throw new Error("invalid message");
-		}
-
 		if (message.type === MessageType.SELECT_CRDT) {
 			const hasCrdt = !!(message.select && this.crdts.has(message.select));
 
@@ -225,7 +251,51 @@ export class CRDTSynchronizer implements Startable {
 			});
 
 			await this.handler.send(response, peerId);
+
+			return;
 		}
+
+		if (message.type === MessageType.SELECT_PROTOCOL) {
+			const crdtName = this.inState.get(peerId)?.crdt;
+
+			if (crdtName == null || message.select == null) {
+				log.general.error("state error");
+				throw new Error("state error");
+			}
+
+			const crdt = this.crdts.get(crdtName);
+
+			if (crdt == null) {
+				log.general.error("state error");
+				throw new Error("state error");
+			}
+
+			const hasSynchronizer = !!crdt.getSynchronizer(message.select);
+
+			if (hasSynchronizer) {
+				// Update state.
+				this.inState.set(peerId, {
+					state: State.Sync,
+					crdt: crdtName,
+					protocol: message.select
+				});
+			}
+
+			log.general(`sending protocol request response: ${hasSynchronizer}`);
+
+			const response = SyncMessage.encode({
+				type: MessageType.SELECT_RESPONSE,
+				id: message.id,
+				accept: hasSynchronizer
+			});
+
+			await this.handler.send(response, peerId);
+
+			return;
+		}
+
+		log.general.error("invalid message type: %s", message.type);
+		throw new Error("invalid message");
 	}
 
 	private async handleSync (message: SyncMessage, peerId: PeerId): Promise<void> {
@@ -240,16 +310,20 @@ export class CRDTSynchronizer implements Startable {
 		}
 
 		const crdtName = this.inState.get(peerId)?.crdt;
+		const protocol = this.inState.get(peerId)?.protocol;
 
-		if (crdtName == null) {
+		if (crdtName == null || protocol == null) {
+			log.general.error("invalid state, %s, %s", crdtName, protocol);
 			throw new Error("invalid state");
 		}
 
 		const crdt = this.crdts.get(crdtName);
+		const synchronizer = crdt?.getSynchronizer(protocol);
+
 		let response: Uint8Array = new Uint8Array();
 
-		if (crdt != null && data.length !== 0) {
-			response = crdt.sync(data, { id: peerId.toBytes(), syncId: message.id }) ?? new Uint8Array();
+		if (synchronizer != null && data.length !== 0) {
+			response = synchronizer.sync(data, { id: peerId.toBytes(), syncId: message.id }) ?? new Uint8Array();
 		}
 
 		const newMessage = SyncMessage.encode({
