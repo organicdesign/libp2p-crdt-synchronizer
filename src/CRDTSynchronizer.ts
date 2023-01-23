@@ -9,7 +9,9 @@ import {
 	MessageHandlerOpts
 } from "@organicdesign/libp2p-message-handler";
 import { logger } from "@libp2p/logger";
-import { CRDTSyncMessage } from "./CRDTSyncProtocol.js";
+import { Store } from "./Store.js";
+import { isSync, isRequest } from "./protocol-helpers.js";
+import { SyncMessage, MessageType } from "./CRDTSyncProtocol.js";
 
 const log = {
 	general: logger("libp2p:crdt-synchronizer"),
@@ -26,13 +28,28 @@ export interface CRDTSynchronizerComponents extends MessageHandlerComponents {
 	pubsub?: PubSub
 }
 
+enum State {
+	None,
+	SelectCRDT,
+	selectProtocol,
+	Sync
+}
+
+interface StateData {
+	state: State,
+	crdt?: string,
+	protocol?: string
+	index?: number
+}
+
 export class CRDTSynchronizer implements Startable {
 	private interval: ReturnType<typeof setInterval>;
 	private readonly options: CRDTSynchronizerOpts;
 	private readonly crdts = new Map<string, CRDT>();
 	private readonly components: CRDTSynchronizerComponents;
-	private readonly msgPromises = new Map<number, (value: CRDTSyncMessage) => void>();
+	private readonly msgPromises = new Map<number, (value: SyncMessage) => void>();
 	private readonly handler: MessageHandler;
+	private readonly outState = new Store<StateData>();
 	private started = false;
 
 	private readonly genMsgId = (() => {
@@ -103,38 +120,48 @@ export class CRDTSynchronizer implements Startable {
 		const connections = this.components.getConnections();
 
 		for (const connection of connections) {
-			log.peers("synchronizing to peer: %p", connection.remotePeer);
+			const peerId = connection.remotePeer;
+
+			log.peers("synchronizing to peer: %p", peerId);
+
+			this.outState.set(peerId, { state: State.None });
 
 			for (const [name, crdt] of this.crdts) {
 				log.crdts("synchronizing crdt: %s", name);
 
+				const response = await this.request({
+					type: MessageType.SELECT_CRDT,
+					select: name
+				}, peerId);
+
+				if (!response.accept) {
+					log.crdts("remote rejected crdt: %s", name);
+					continue;
+				}
+
 				const messageId = this.genMsgId();
-				const peerId = connection.remotePeer;
 				let sync = crdt.sync(undefined, { id: peerId.toBytes(), syncId: messageId });
 
 				while (sync != null) {
+					let response: SyncMessage;
+
 					try {
-						await this.handler.send(CRDTSyncMessage.encode({
-							name,
-							data: sync ?? new Uint8Array([]),
-							id: messageId,
-							request: true
-						}), peerId);
+						response = await this.request({
+							type: MessageType.SYNC,
+							sync: sync ?? new Uint8Array(),
+							id: messageId
+						}, peerId);
 					} catch (error) {
 						log.general.error("sync failed: %o", error);
 						break;
 					}
 
-					const response = await new Promise((resolve: (value: CRDTSyncMessage) => void) => {
-						this.msgPromises.set(messageId, resolve);
-					});
-
 					// Remote does not have any data to provide.
-					if (response.data.length === 0) {
+					if (response.sync?.length === 0) {
 						break;
 					}
 
-					sync = crdt.sync(response.data, { id: peerId.toBytes(), syncId: messageId });
+					sync = crdt.sync(response.sync, { id: peerId.toBytes(), syncId: messageId });
 				}
 
 				log.crdts("synchronized crdt: %s", name);
@@ -150,21 +177,37 @@ export class CRDTSynchronizer implements Startable {
 		return this.crdts.get(name);
 	}
 
-	private async handleMessage (message: Uint8Array, peerId: PeerId): Promise<void> {
-		const data = CRDTSyncMessage.decode(message);
+	private async handleMessage (data: Uint8Array, peerId: PeerId): Promise<void> {
+		const message = SyncMessage.decode(data);
 
-		if (data.request === true) {
-			await this.handleSync(data, peerId);
-		} else {
-			// Resolve promise.
-			const resolver = this.msgPromises.get(data.id);
+		switch (message.type) {
+			case MessageType.SELECT_RESPONSE:
+			case MessageType.SYNC_RESPONSE:
+				// Resolve promise.
+				const resolver = this.msgPromises.get(message.id);
 
-			this.msgPromises.delete(data.id);
-			resolver?.(data);
+				this.msgPromises.delete(message.id);
+				resolver?.(message);
+
+				break;
+			case MessageType.SYNC:
+				await this.handleSync(message, peerId);
+				break;
+			default:
+				log.general.error(`recieved unknown message type: ${message.type}`);
+				break;
 		}
 	}
 
-	private async handleSync (message: CRDTSyncMessage, peerId: PeerId): Promise<void> {
+	private async handleSync (message: SyncMessage, peerId: PeerId): Promise<void> {
+		if (!isSync(message)) {
+			throw new Error("invalid message");
+		}
+
+		const data = message.sync;
+
+		throw new Error("not implemented");
+		/*
 		const crdt = this.crdts.get(message.name);
 		let response: Uint8Array = new Uint8Array();
 
@@ -179,6 +222,21 @@ export class CRDTSynchronizer implements Startable {
 		});
 
 		await this.handler.send(newMessage, peerId);
+		*/
+	}
+
+	// Make a RPC style request to a peer.
+	private async request (message: SyncMessage | Omit<SyncMessage, "id">, peerId: PeerId): Promise<SyncMessage> {
+		const parsedMessage = message["id"] == null ? {...message, id: this.genMsgId() } : message as SyncMessage;
+
+		if (!isRequest(parsedMessage)) {
+			throw new Error(`invalid message type for request: ${parsedMessage.type}`)
+		}
+		await this.handler.send(SyncMessage.encode(parsedMessage), peerId);
+
+		return await new Promise((resolve: (value: SyncMessage) => void) => {
+			this.msgPromises.set(parsedMessage.id, resolve);
+		});
 	}
 }
 
