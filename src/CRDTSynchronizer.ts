@@ -1,7 +1,7 @@
 import type { PubSub } from "@libp2p/interface-pubsub";
 import type { PeerId } from "@libp2p/interface-peer-id";
 import type { Startable } from "@libp2p/interfaces/startable";
-import type { CRDT, CRDTSynchronizer as ICRDTSynchronizer } from "./new-interfaces.js";
+import type { CRDT, SynchronizableCRDT, CRDTSynchronizer as ICRDTSynchronizer } from "@organicdesign/crdt-interfaces";
 import {
 	createMessageHandler,
 	MessageHandler,
@@ -45,7 +45,7 @@ interface StateData {
 export class CRDTSynchronizer implements Startable {
 	private interval: ReturnType<typeof setInterval>;
 	private readonly options: CRDTSynchronizerOpts;
-	private readonly crdts = new Map<string, CRDT>();
+	private readonly crdts = new Map<string, SynchronizableCRDT>();
 	private readonly components: CRDTSynchronizerComponents;
 	private readonly msgPromises = new Map<number, (value: SyncMessage) => void>();
 	private readonly handler: MessageHandler;
@@ -63,7 +63,7 @@ export class CRDTSynchronizer implements Startable {
 		return [...this.crdts.keys()];
 	}
 
-	setCRDT (name: string, crdt: CRDT): void {
+	setCRDT (name: string, crdt: SynchronizableCRDT): void {
 		this.crdts.set(name, crdt);
 	}
 
@@ -147,7 +147,7 @@ export class CRDTSynchronizer implements Startable {
 				// Step 2: Select a Protocol
 				let synchronizer: ICRDTSynchronizer | undefined;
 
-				for (const protocol of crdt.getProtocols()) {
+				for (const protocol of crdt.getSynchronizerProtocols()) {
 					const response = await this.request({
 						type: MessageType.SELECT_PROTOCOL,
 						select: protocol
