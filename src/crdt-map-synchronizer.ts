@@ -62,8 +62,9 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 				break;
 			*/
 			case MessageType.SELECT_CRDT:
-			//case MessageType.SELECT_PROTOCOL:
 				return this.handleCRDTSelect(message, context.id);
+			case MessageType.SELECT_PROTOCOL:
+				return this.handleProtocolSelect(message, context.id);
 			default:
 				throw new Error(`recieved unknown message type: ${message.type}`);
 		}
@@ -106,7 +107,55 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 
 		return SyncMessage.encode({
 			type: MessageType.SELECT_RESPONSE,
-			select: key,
+			accept: hasCrdt,
+			id: message.id
+		});
+	}
+
+	private handleProtocolSelect (message: SyncMessage, id: Uint8Array) {
+		if (message.type !== MessageType.SELECT_PROTOCOL) {
+			throw new Error(`invalid handler for message of type: ${message.type}`);
+		}
+
+		const protocol = message.select;
+
+		if (protocol == null) {
+			throw new Error(`SELECT_PROTOCOL message must include the select parameter`);
+		}
+
+		const store = this.inStore.get(id);
+		const crdtKey = store?.crdt;
+
+		if (store == null || crdtKey == null) {
+			return SyncMessage.encode({
+				type: MessageType.SELECT_RESPONSE,
+				accept: false,
+				id: message.id
+			});
+		}
+
+		const crdt = this.components.getCrdt(crdtKey);
+
+		if (crdt == null || !isSynchronizableCRDT(crdt)) {
+			return SyncMessage.encode({
+				type: MessageType.SELECT_RESPONSE,
+				accept: false,
+				id: message.id
+			});
+		}
+
+		const hasSynchronizer = !!(crdt as SynchronizableCRDT).getSynchronizer(protocol);
+
+		if (hasSynchronizer) {
+			this.inStore.set(id, {
+				...store,
+				protocol
+			});
+		}
+
+		return SyncMessage.encode({
+			type: MessageType.SELECT_RESPONSE,
+			accept: hasSynchronizer,
 			id: message.id
 		});
 	}
