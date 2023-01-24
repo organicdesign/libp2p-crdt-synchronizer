@@ -77,10 +77,10 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 		const accepted = !!message.accept;
 
 		if (accepted) {
-			throw new Error("not implemented");
-		} else {
-			return this.selectCRDT(id);
+			return this.selectProtocol(id);
 		}
+
+		return this.selectCRDT(id);
 	}
 
 	private handleCRDTSelect (message: SyncMessage, id: Uint8Array) {
@@ -148,7 +148,13 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 			return this.selectCRDT(id);
 		}
 
-		const iterator = (crdt as SynchronizableCRDT).getSynchronizerProtocols()[Symbol.iterator]();
+		let iterator: Iterator<string>;
+
+		if (store.protocolIterator == null) {
+			iterator = (crdt as SynchronizableCRDT).getSynchronizerProtocols()[Symbol.iterator]();
+		} else {
+			iterator = store.protocolIterator;
+		}
 
 		const protocol = iterator.next().value;
 
