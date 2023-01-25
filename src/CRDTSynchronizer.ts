@@ -12,6 +12,7 @@ import { logger } from "@libp2p/logger";
 import { Store } from "./Store.js";
 import { isSync, isRequest } from "./protocol-helpers.js";
 import { SyncMessage, MessageType } from "./CRDTSyncProtocol.js";
+import { CRDTMapSynchronizer } from "./crdt-map-synchronizer.js";
 
 const log = {
 	general: logger("libp2p:crdt-synchronizer"),
@@ -25,6 +26,7 @@ export interface CRDTSynchronizerOpts extends MessageHandlerOpts {
 }
 
 export interface CRDTSynchronizerComponents extends MessageHandlerComponents {
+	peerId: PeerId
 	pubsub?: PubSub
 }
 
@@ -51,6 +53,7 @@ export class CRDTSynchronizer implements Startable {
 	private readonly handler: MessageHandler;
 	private readonly inState = new Store<StateData>();
 	private readonly outState = new Store<StateData>();
+	private readonly synchronizer: CRDTMapSynchronizer;
 	private started = false;
 
 	private readonly genMsgId = (() => {
@@ -79,6 +82,12 @@ export class CRDTSynchronizer implements Startable {
 		this.handler = createMessageHandler(options)(components);
 
 		this.handler.handle((message, peerId) => this.handleMessage(message, peerId));
+
+		this.synchronizer = new CRDTMapSynchronizer({
+			getId: () => this.components.peerId.toBytes(),
+			getCRDTKeys: () => this.CRDTNames,
+			getCrdt: (key: string) => this.crdts.get(key)
+		});
 	}
 
 	async start (): Promise<void> {

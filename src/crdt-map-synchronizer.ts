@@ -4,8 +4,7 @@ import { SyncMessage, MessageType } from "./CRDTSyncProtocol.js";
 
 export interface CRDTMapSyncComponents {
 	getCRDTKeys (): Iterable<string>
-	getCrdt (key: string): CRDT | SynchronizableCRDT
-	getPeers (): Iterable<Uint8Array>
+	getCrdt (key: string): CRDT | SynchronizableCRDT | undefined
 	getId (): Uint8Array
 }
 
