@@ -80,7 +80,7 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 		return this.selectCRDT(id);
 	}
 
-	private handleCRDTSync (message: SyncMessage, id: Uint8Array): Uint8Array {
+	private handleCRDTSync (message: SyncMessage, id: Uint8Array) {
 		if (message.type !== MessageType.SYNC) {
 			throw new Error(`invalid handler for message of type: ${message.type}`);
 		}
@@ -88,7 +88,7 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 		return this.runSync(id, message);
 	}
 
-	private handleCRDTSyncResponse (message: SyncMessage, id: Uint8Array): Uint8Array {
+	private handleCRDTSyncResponse (message: SyncMessage, id: Uint8Array) {
 		if (message.type !== MessageType.SYNC_RESPONSE) {
 			throw new Error(`invalid handler for message of type: ${message.type}`);
 		}
@@ -229,7 +229,12 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 			iterator = store.crdtIterator;
 		}
 
-		const key = iterator.next().value;
+		const itrResult = iterator.next();
+		const key = itrResult.value;
+
+		if (itrResult.done) {
+			return;
+		}
 
 		this.outStore.set(this.components.getId(), {
 			crdt: key,
@@ -264,7 +269,12 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 			iterator = store.protocolIterator;
 		}
 
-		const protocol = iterator.next().value;
+		const itrResult = iterator.next();
+		const protocol = itrResult.value;
+
+		if (itrResult.done) {
+			return this.selectCRDT(id);
+		}
 
 		this.outStore.set(this.components.getId(), {
 			crdt: store.crdt,
