@@ -1,7 +1,7 @@
 import type { PubSub } from "@libp2p/interface-pubsub";
 import type { PeerId } from "@libp2p/interface-peer-id";
 import type { Startable } from "@libp2p/interfaces/startable";
-import type { CRDT, SynchronizableCRDT, CRDTSynchronizer as ICRDTSynchronizer } from "@organicdesign/crdt-interfaces";
+import type { CRDT, SynchronizableCRDT  } from "@organicdesign/crdt-interfaces";
 import {
 	createMessageHandler,
 	MessageHandler,
@@ -9,9 +9,7 @@ import {
 	MessageHandlerOpts
 } from "@organicdesign/libp2p-message-handler";
 import { logger } from "@libp2p/logger";
-import { Store } from "./Store.js";
-import { isSync, isRequest } from "./protocol-helpers.js";
-import { SyncMessage, MessageType } from "./CRDTSyncProtocol.js";
+import { SyncMessage, SyncMessageWrapper } from "./CRDTSyncProtocol.js";
 import { CRDTMapSynchronizer } from "./crdt-map-synchronizer.js";
 
 const log = {
@@ -30,29 +28,13 @@ export interface CRDTSynchronizerComponents extends MessageHandlerComponents {
 	pubsub?: PubSub
 }
 
-enum State {
-	None,
-	SelectCRDT,
-	selectProtocol,
-	Sync
-}
-
-interface StateData {
-	state: State,
-	crdt?: string,
-	protocol?: string
-	index?: number
-}
-
 export class CRDTSynchronizer implements Startable {
 	private interval: ReturnType<typeof setInterval>;
 	private readonly options: CRDTSynchronizerOpts;
 	private readonly crdts = new Map<string, SynchronizableCRDT>();
 	private readonly components: CRDTSynchronizerComponents;
-	private readonly msgPromises = new Map<number, (value: SyncMessage) => void>();
+	private readonly msgPromises = new Map<number, (value: Uint8Array) => void>();
 	private readonly handler: MessageHandler;
-	private readonly inState = new Store<StateData>();
-	private readonly outState = new Store<StateData>();
 	private readonly synchronizer: CRDTMapSynchronizer;
 	private started = false;
 
@@ -134,79 +116,25 @@ export class CRDTSynchronizer implements Startable {
 
 			log.peers("synchronizing to peer: %p", peerId);
 
-			this.outState.set(peerId, { state: State.None });
+			let syncData = this.synchronizer.sync(undefined, { id: peerId.toBytes(), syncId: 0 });
 
-			for (const [name, crdt] of this.crdts) {
-				log.crdts("synchronizing crdt: %s", name);
-
-
-				// Step 1: Select a CRDT
-				const response = await this.request({
-					type: MessageType.SELECT_CRDT,
-					select: name
-				}, peerId);
-
-				if (!response.accept) {
-					log.crdts("remote rejected crdt: %s", name);
-					continue;
-				}
-
-				log.crdts("remote accepted crdt: %s", name);
-
-				// Step 2: Select a Protocol
-				let synchronizer: ICRDTSynchronizer | undefined;
-
-				for (const protocol of crdt.getSynchronizerProtocols()) {
-					const response = await this.request({
-						type: MessageType.SELECT_PROTOCOL,
-						select: protocol
-					}, peerId);
-
-					if (!response.accept) {
-						log.crdts("remote rejected protocol: %s", protocol);
-						continue;
-					}
-
-					log.crdts("remote accepted protocol: %s", protocol);
-
-					synchronizer = crdt.getSynchronizer(protocol);
+			for (let i = 0; i < 100; i++) {
+				if (syncData == null) {
 					break;
 				}
 
-				if (synchronizer == null) {
-					log.crdts("no valid protocol found");
-					continue;
+				log.peers("Req: %o", SyncMessage.decode(syncData));
+
+				const response = await this.request(syncData, peerId);
+
+				if (response.length === 0) {
+					break;
 				}
 
-				// Step #3 synchronize
-				const messageId = this.genMsgId();
-				let sync = synchronizer.sync(undefined, { id: peerId.toBytes(), syncId: messageId });
+				log.peers("Res: %o", SyncMessage.decode(response));
 
-				while (sync != null) {
-					let response: SyncMessage;
-
-					try {
-						response = await this.request({
-							type: MessageType.SYNC,
-							sync: sync ?? new Uint8Array(),
-							id: messageId
-						}, peerId);
-					} catch (error) {
-						log.general.error("sync failed: %o", error);
-						break;
-					}
-
-					// Remote does not have any data to provide.
-					if (response.sync?.length === 0) {
-						break;
-					}
-
-					sync = synchronizer.sync(response.sync, { id: peerId.toBytes(), syncId: messageId });
-				}
-
-				log.crdts("synchronized crdt: %s", name);
+				syncData = this.synchronizer.sync(response, { id: peerId.toBytes(), syncId: 0 });
 			}
-
 			log.peers("synchronized to peer: %p", connection.remotePeer);
 		}
 
@@ -218,144 +146,39 @@ export class CRDTSynchronizer implements Startable {
 	}
 
 	private async handleMessage (data: Uint8Array, peerId: PeerId): Promise<void> {
-		const message = SyncMessage.decode(data);
+		const message = SyncMessageWrapper.decode(data);
 
-		switch (message.type) {
-			case MessageType.SELECT_RESPONSE:
-			case MessageType.SYNC_RESPONSE:
-				// Resolve promise.
-				const resolver = this.msgPromises.get(message.id);
+		if (message.request === true) {
+			const response = this.synchronizer.sync(message.data, { id: peerId.toBytes(), syncId: message.id });
 
-				this.msgPromises.delete(message.id);
-				resolver?.(message);
-
-				break;
-			case MessageType.SYNC:
-				await this.handleSync(message, peerId);
-				break;
-			case MessageType.SELECT_CRDT:
-			case MessageType.SELECT_PROTOCOL:
-				await this.handleSelect(message, peerId);
-				break;
-			default:
-				log.general.error("recieved unknown message type: %s", message.type);
-				throw new Error(`recieved unknown message type: ${message.type}`);
-		}
-	}
-
-	private async handleSelect (message: SyncMessage, peerId: PeerId): Promise<void> {
-		if (message.type === MessageType.SELECT_CRDT) {
-			const hasCrdt = !!(message.select && this.crdts.has(message.select));
-
-			// Update state.
-			this.inState.set(peerId, {
-				state: hasCrdt ? State.SelectCRDT : State.None,
-				crdt: message.select
-			});
-
-			const response = SyncMessage.encode({
-				type: MessageType.SELECT_RESPONSE,
-				id: message.id,
-				accept: hasCrdt
-			});
-
-			await this.handler.send(response, peerId);
-
+			await this.handler.send(SyncMessageWrapper.encode({
+				data: response ?? new Uint8Array(),
+				id: message.id
+			}), peerId);
 			return;
 		}
 
-		if (message.type === MessageType.SELECT_PROTOCOL) {
-			const crdtName = this.inState.get(peerId)?.crdt;
+		const resolver = this.msgPromises.get(message.id);
 
-			if (crdtName == null || message.select == null) {
-				log.general.error("state error");
-				throw new Error("state error");
-			}
-
-			const crdt = this.crdts.get(crdtName);
-
-			if (crdt == null) {
-				log.general.error("state error");
-				throw new Error("state error");
-			}
-
-			const hasSynchronizer = !!crdt.getSynchronizer(message.select);
-
-			if (hasSynchronizer) {
-				// Update state.
-				this.inState.set(peerId, {
-					state: State.Sync,
-					crdt: crdtName,
-					protocol: message.select
-				});
-			}
-
-			log.general(`sending protocol request response: ${hasSynchronizer}`);
-
-			const response = SyncMessage.encode({
-				type: MessageType.SELECT_RESPONSE,
-				id: message.id,
-				accept: hasSynchronizer
-			});
-
-			await this.handler.send(response, peerId);
-
-			return;
-		}
-
-		log.general.error("invalid message type: %s", message.type);
-		throw new Error("invalid message");
-	}
-
-	private async handleSync (message: SyncMessage, peerId: PeerId): Promise<void> {
-		if (!isSync(message)) {
-			throw new Error("invalid message");
-		}
-
-		const data = message.sync;
-
-		if (data == null) {
-			throw new Error("invalid sync data");
-		}
-
-		const crdtName = this.inState.get(peerId)?.crdt;
-		const protocol = this.inState.get(peerId)?.protocol;
-
-		if (crdtName == null || protocol == null) {
-			log.general.error("invalid state, %s, %s", crdtName, protocol);
-			throw new Error("invalid state");
-		}
-
-		const crdt = this.crdts.get(crdtName);
-		const synchronizer = crdt?.getSynchronizer(protocol);
-
-		let response: Uint8Array = new Uint8Array();
-
-		if (synchronizer != null && data.length !== 0) {
-			response = synchronizer.sync(data, { id: peerId.toBytes(), syncId: message.id }) ?? new Uint8Array();
-		}
-
-		const newMessage = SyncMessage.encode({
-			type: MessageType.SYNC_RESPONSE,
-			sync: response,
-			id: message.id
-		});
-
-		await this.handler.send(newMessage, peerId);
+		this.msgPromises.delete(message.id);
+		resolver?.(message.data);
 	}
 
 	// Make a RPC style request to a peer.
-	private async request (message: SyncMessage | Omit<SyncMessage, "id">, peerId: PeerId): Promise<SyncMessage> {
-		const parsedMessage = message["id"] == null ? {...message, id: this.genMsgId() } : message as SyncMessage;
+	private async request (data: Uint8Array, peerId: PeerId): Promise<Uint8Array> {
+		const id = this.genMsgId();
 
-		if (!isRequest(parsedMessage)) {
-			throw new Error(`invalid message type for request: ${parsedMessage.type}`)
-		}
-		await this.handler.send(SyncMessage.encode(parsedMessage), peerId);
-
-		return await new Promise((resolve: (value: SyncMessage) => void) => {
-			this.msgPromises.set(parsedMessage.id, resolve);
+		const promise = new Promise((resolve: (value: Uint8Array) => void) => {
+			this.msgPromises.set(id, resolve);
 		});
+
+		await this.handler.send(SyncMessageWrapper.encode({
+			request: true,
+			data,
+			id
+		}), peerId);
+
+		return await promise;
 	}
 }
 

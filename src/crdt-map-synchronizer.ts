@@ -108,7 +108,8 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 		const protocol = store?.protocol;
 
 		if (store == null || key == null || protocol == null) {
-			throw new Error("invalid state");
+			return;
+			//throw new Error("invalid state");
 		}
 
 		const crdt = this.components.getCrdt(key);
