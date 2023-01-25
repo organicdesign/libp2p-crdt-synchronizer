@@ -24,3 +24,9 @@ message SyncMessage {
 	// Selection response, used in SELECT_RESPONSE
 	optional bool accept = 5;
 }
+
+message SyncMessageWrapper {
+	uint32 id = 1;
+	bytes data = 2;
+	optional bool request = 3;
+}
