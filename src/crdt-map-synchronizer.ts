@@ -70,7 +70,7 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 		const store = this.outStore.get(id);
 
 		if (store != null && store.crdt != null && store.protocol != null && accepted) {
-			return this.syncCRDT(id);
+			return this.runSync(id);
 		}
 
 		if (store != null && store.crdt != null && !accepted) {
@@ -80,16 +80,67 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 		return this.selectCRDT(id);
 	}
 
-	private syncCRDT (id: Uint8Array): Uint8Array {
-		throw new Error("not implemented");
-	}
-
 	private handleCRDTSync (message: SyncMessage, id: Uint8Array): Uint8Array {
-		throw new Error("not implemented");
+		if (message.type !== MessageType.SYNC) {
+			throw new Error(`invalid handler for message of type: ${message.type}`);
+		}
+
+		return this.runSync(id, message);
 	}
 
 	private handleCRDTSyncResponse (message: SyncMessage, id: Uint8Array): Uint8Array {
-		throw new Error("not implemented");
+		if (message.type !== MessageType.SYNC_RESPONSE) {
+			throw new Error(`invalid handler for message of type: ${message.type}`);
+		}
+
+		return this.runSync(id, message);
+	}
+
+	private runSync (id: Uint8Array, message?: SyncMessage) {
+		if (message != null && ![MessageType.SYNC_RESPONSE, MessageType.SYNC].includes(message.type)) {
+			throw new Error(`invalid handler for message of type: ${message.type}`);
+		}
+
+		let storeToUse: BufferMap<Store>;
+
+		if (message == null || message.type === MessageType.SYNC_RESPONSE) {
+			storeToUse = this.outStore;
+		} else {
+			storeToUse = this.inStore;
+		}
+
+		const store = storeToUse.get(id);
+		const key = store?.crdt;
+		const protocol = store?.protocol;
+
+		if (store == null || key == null || protocol == null) {
+			throw new Error("invalid state");
+		}
+
+		const crdt = this.components.getCrdt(key);
+
+		if (crdt == null || !isSynchronizableCRDT(crdt)) {
+			throw new Error("invalid crdt");
+		}
+
+		const synchronizer = (crdt as SynchronizableCRDT).getSynchronizer(protocol);
+
+		if (synchronizer == null) {
+			throw new Error("invalid protocol");
+		}
+
+		const messageId = message?.id ?? this.genMsgId();
+		const syncData = synchronizer.sync(message?.sync, { id, syncId: messageId });
+
+		if (syncData == null) {
+			return this.selectCRDT(id);
+		}
+
+		return SyncMessage.encode({
+			type: MessageType.SYNC,
+			id: messageId,
+			sync: syncData
+		});
 	}
 
 	private handleCRDTSelect (message: SyncMessage, id: Uint8Array) {
