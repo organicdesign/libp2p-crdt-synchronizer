@@ -19,7 +19,7 @@ interface Store {
 	protocolIterator?: Iterator<string>
 }
 
-const isSynchronizableCRDT = (crdt: CRDT) => crdt.hasOwnProperty("getSynchronizer") && crdt.hasOwnProperty("getSynchronizerProtocols");
+const isSynchronizableCRDT = (crdt: CRDT) => crdt["getSynchronizer"] && crdt["getSynchronizerProtocols"];
 
 export class CRDTMapSynchronizer implements CRDTSynchronizer {
 	public readonly protocol: string;
@@ -39,6 +39,8 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 
 	sync (data: Uint8Array | undefined, context: SyncContext): Uint8Array | undefined {
 		if (data == null) {
+			this.inStore.clear();
+			this.outStore.clear();
 			return this.selectCRDT(context.id);
 		}
 
@@ -74,10 +76,6 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 
 		if (store.protocol != null && accepted) {
 			return this.runSync(id);
-		}
-
-		if (store.protocol != null && !accepted) {
-			return this.selectProtocol(id);
 		}
 
 		return this.selectProtocol(id);
