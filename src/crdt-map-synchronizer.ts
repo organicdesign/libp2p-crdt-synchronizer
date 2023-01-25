@@ -68,15 +68,19 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 		const accepted = !!message.accept;
 		const store = this.outStore.get(id);
 
-		if (store != null && store.crdt != null && store.protocol != null && accepted) {
+		if (store == null || store.crdt == null) {
+			return this.selectCRDT(id);
+		}
+
+		if (store.protocol != null && accepted) {
 			return this.runSync(id);
 		}
 
-		if (store != null && store.crdt != null && !accepted) {
+		if (store.protocol != null && !accepted) {
 			return this.selectProtocol(id);
 		}
 
-		return this.selectCRDT(id);
+		return this.selectProtocol(id);
 	}
 
 	private handleCRDTSync (message: SyncMessage, id: Uint8Array) {
@@ -100,15 +104,8 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 			throw new Error(`invalid handler for message of type: ${message.type}`);
 		}
 
-		let storeToUse: BufferMap<Store>;
-
-		if (message == null || message.type === MessageType.SYNC_RESPONSE) {
-			storeToUse = this.outStore;
-		} else {
-			storeToUse = this.inStore;
-		}
-
-		const store = storeToUse.get(id);
+		const direction = (message == null || message.type === MessageType.SYNC_RESPONSE) ? "out" : "in";
+		const store = (direction === "out" ? this.outStore : this.inStore).get(id);
 		const key = store?.crdt;
 		const protocol = store?.protocol;
 
@@ -131,12 +128,16 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 		const messageId = message?.id ?? this.genMsgId();
 		const syncData = synchronizer.sync(message?.sync, { id, syncId: messageId });
 
-		if (syncData == null) {
+		if (syncData == null && direction === "out") {
 			return this.selectCRDT(id);
 		}
 
+		if (syncData == null) {
+			return;
+		}
+
 		return SyncMessage.encode({
-			type: MessageType.SYNC,
+			type: direction === "out" ? MessageType.SYNC : MessageType.SYNC_RESPONSE,
 			id: messageId,
 			sync: syncData
 		});
@@ -235,7 +236,7 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 			return;
 		}
 
-		this.outStore.set(this.components.getId(), {
+		this.outStore.set(id, {
 			crdt: key,
 			crdtIterator: iterator
 		});
@@ -275,7 +276,7 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 			return this.selectCRDT(id);
 		}
 
-		this.outStore.set(this.components.getId(), {
+		this.outStore.set(id, {
 			crdt: store.crdt,
 			crdtIterator: store.crdtIterator,
 			protocol,
