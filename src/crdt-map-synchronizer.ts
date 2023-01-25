@@ -48,19 +48,10 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 		switch (message.type) {
 			case MessageType.SELECT_RESPONSE:
 				return this.handleCRDTSelectResponse(message, context.id);
-			/*
 			case MessageType.SYNC_RESPONSE:
-				// Resolve promise.
-				const resolver = this.msgPromises.get(message.id);
-
-				this.msgPromises.delete(message.id);
-				resolver?.(message);
-
-				break;
+				return this.handleCRDTSyncResponse(message, context.id);
 			case MessageType.SYNC:
-				await this.handleSync(message, peerId);
-				break;
-			*/
+				return this.handleCRDTSync(message, context.id);
 			case MessageType.SELECT_CRDT:
 				return this.handleCRDTSelect(message, context.id);
 			case MessageType.SELECT_PROTOCOL:
@@ -76,12 +67,29 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 		}
 
 		const accepted = !!message.accept;
+		const store = this.outStore.get(id);
 
-		if (accepted) {
+		if (store != null && store.crdt != null && store.protocol != null && accepted) {
+			return this.syncCRDT(id);
+		}
+
+		if (store != null && store.crdt != null && !accepted) {
 			return this.selectProtocol(id);
 		}
 
 		return this.selectCRDT(id);
+	}
+
+	private syncCRDT (id: Uint8Array): Uint8Array {
+		throw new Error("not implemented");
+	}
+
+	private handleCRDTSync (message: SyncMessage, id: Uint8Array): Uint8Array {
+		throw new Error("not implemented");
+	}
+
+	private handleCRDTSyncResponse (message: SyncMessage, id: Uint8Array): Uint8Array {
+		throw new Error("not implemented");
 	}
 
 	private handleCRDTSelect (message: SyncMessage, id: Uint8Array) {
