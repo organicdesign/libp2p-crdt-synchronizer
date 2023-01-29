@@ -24,7 +24,7 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 
 	sync (data: Uint8Array | undefined, context: SyncContext): Uint8Array | undefined {
 		if (data == null) {
-			const crdt = this.getNextCRDT();
+			const crdt = this.getNextCrdt();
 
 			return StatelessSyncMessage.encode({
 				type: StatelessMessageType.SELECT,
@@ -39,20 +39,69 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 				if (message.accept) {
 					if (message.crdt != null && message.protocol != null) {
 						// Accepted both protocol and crdt
+
+						const crdt = this.components.getCrdt(message.crdt);
+
+						if (crdt == null || !isSynchronizableCRDT(crdt)) {
+							const crdt = this.getNextCrdt(message.crdt);
+
+							if (crdt == null) {
+								return new Uint8Array();
+							}
+
+							return StatelessSyncMessage.encode({
+								type: StatelessMessageType.SELECT,
+								crdt
+							});
+						}
+
+						const synchronizer = (crdt as SynchronizableCRDT).getSynchronizer(message.protocol);
+
+						if (synchronizer == null) {
+							throw new Error("handle somehow if synchronizer is null");
+						}
 					}
 
 					if (message.crdt != null) {
-						// Accepted only CRDT
+						const protocol = this.getNextProtocol(message.crdt);
+
+						if (protocol == null) {
+							const crdt = this.getNextCrdt(message.crdt);
+
+							if (crdt == null) {
+								return new Uint8Array();
+							}
+
+							return StatelessSyncMessage.encode({
+								type: StatelessMessageType.SELECT,
+								crdt
+							});
+						}
+
+						return StatelessSyncMessage.encode({
+							type: StatelessMessageType.SELECT,
+							crdt: message.crdt,
+							protocol
+						});
 					}
 
 					throw new Error("SELECT_RESPONSE must include crdt");
 				} else {
 					if (message.crdt != null && message.protocol != null) {
+						const protocol = this.getNextProtocol(message.crdt, message.protocol);
+
+						if (protocol != null) {
+							return StatelessSyncMessage.encode({
+								type: StatelessMessageType.SELECT,
+								crdt: message.crdt,
+								protocol
+							});
+						}
 					}
 
 					if (message.crdt != null) {
 						// Rejected only CRDT
-						const crdt = this.getNextCRDT(message.crdt);
+						const crdt = this.getNextCrdt(message.crdt);
 
 						if (crdt == null) {
 							return new Uint8Array();
@@ -77,7 +126,7 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 		}
 	}
 
-	private getNextCRDT(last?: string) {
+	private getNextCrdt(last?: string) {
 		return this.getNext(this.components.getCRDTKeys(), last);
 	}
 
