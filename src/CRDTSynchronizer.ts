@@ -9,8 +9,8 @@ import {
 	MessageHandlerOpts
 } from "@organicdesign/libp2p-message-handler";
 import { logger } from "@libp2p/logger";
-import { SyncMessage, SyncMessageWrapper } from "./CRDTSyncProtocol.js";
-import { CRDTMapSynchronizer } from "./crdt-map-synchronizer.js";
+import { StatelessSyncMessage, SyncMessageWrapper } from "./CRDTSyncProtocol.js";
+import { CRDTMapSynchronizer } from "./stateless-crdt-map-synchronizer.js";
 
 const log = {
 	general: logger("libp2p:crdt-synchronizer"),
@@ -123,7 +123,7 @@ export class CRDTSynchronizer implements Startable {
 					break;
 				}
 
-				log.peers("Req: %o", SyncMessage.decode(syncData));
+				log.peers("Req: %o", StatelessSyncMessage.decode(syncData));
 
 				const response = await this.request(syncData, peerId);
 
@@ -131,7 +131,7 @@ export class CRDTSynchronizer implements Startable {
 					break;
 				}
 
-				log.peers("Res: %o", SyncMessage.decode(response));
+				log.peers("Res: %o", StatelessSyncMessage.decode(response));
 
 				syncData = this.synchronizer.sync(response, { id: peerId.toBytes(), syncId: 0 });
 			}

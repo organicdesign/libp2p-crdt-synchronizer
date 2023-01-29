@@ -81,7 +81,7 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 					}
 
 					if (message.sync == null || message.sync.length === 0) {
-						return new Uint8Array();
+						return;
 					}
 
 					const crdt = this.components.getCrdt(message.crdt);
@@ -108,7 +108,9 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 
 					return StatelessSyncMessage.encode({
 						type: StatelessMessageType.SYNC,
-						sync: synchronizer.sync(message.sync, context)
+						sync: synchronizer.sync(message.sync, context),
+						crdt: message.crdt,
+						protocol: message.protocol
 					});
 				}
 			case StatelessMessageType.SYNC:
@@ -140,7 +142,9 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 
 				return StatelessSyncMessage.encode({
 					type: StatelessMessageType.SYNC_RESPONSE,
-					sync: synchronizer.sync(message.sync, context)
+					sync: synchronizer.sync(message.sync, context),
+					crdt: message.crdt,
+					protocol: message.protocol
 				});
 
 			case StatelessMessageType.SELECT:
@@ -202,7 +206,7 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 		const crdt = this.getNextCrdt(name);
 
 		if (crdt == null) {
-			return new Uint8Array();
+			return;
 		}
 
 		return StatelessSyncMessage.encode({
