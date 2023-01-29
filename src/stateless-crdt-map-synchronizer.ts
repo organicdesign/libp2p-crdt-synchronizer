@@ -18,7 +18,7 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 	private readonly components: CRDTMapSyncComponents;
 
 	constructor(components: CRDTMapSyncComponents, options: Partial<CRDTMapSyncOpts> = {}) {
-		this.protocol = options.protocol ?? "/crdt-map/0.1.0";
+		this.protocol = options.protocol ?? "/stateless-crdt-map/0.1.0";
 		this.components = components;
 	}
 
@@ -39,78 +39,32 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 				if (message.accept) {
 					if (message.crdt != null && message.protocol != null) {
 						// Accepted both protocol and crdt
-
 						const crdt = this.components.getCrdt(message.crdt);
 
 						if (crdt == null || !isSynchronizableCRDT(crdt)) {
-							const crdt = this.getNextCrdt(message.crdt);
-
-							if (crdt == null) {
-								return new Uint8Array();
-							}
-
-							return StatelessSyncMessage.encode({
-								type: StatelessMessageType.SELECT,
-								crdt
-							});
+							return this.selectNextCrdt(message.crdt);
 						}
 
 						const synchronizer = (crdt as SynchronizableCRDT).getSynchronizer(message.protocol);
 
 						if (synchronizer == null) {
-							throw new Error("handle somehow if synchronizer is null");
+							return this.selectNextProtocol(message.crdt, message.protocol);
 						}
 					}
 
 					if (message.crdt != null) {
-						const protocol = this.getNextProtocol(message.crdt);
-
-						if (protocol == null) {
-							const crdt = this.getNextCrdt(message.crdt);
-
-							if (crdt == null) {
-								return new Uint8Array();
-							}
-
-							return StatelessSyncMessage.encode({
-								type: StatelessMessageType.SELECT,
-								crdt
-							});
-						}
-
-						return StatelessSyncMessage.encode({
-							type: StatelessMessageType.SELECT,
-							crdt: message.crdt,
-							protocol
-						});
+						return this.selectNextProtocol(message.crdt, message.protocol);
 					}
 
 					throw new Error("SELECT_RESPONSE must include crdt");
 				} else {
 					if (message.crdt != null && message.protocol != null) {
-						const protocol = this.getNextProtocol(message.crdt, message.protocol);
-
-						if (protocol != null) {
-							return StatelessSyncMessage.encode({
-								type: StatelessMessageType.SELECT,
-								crdt: message.crdt,
-								protocol
-							});
-						}
+						return this.selectNextProtocol(message.crdt, message.protocol);
 					}
 
 					if (message.crdt != null) {
 						// Rejected only CRDT
-						const crdt = this.getNextCrdt(message.crdt);
-
-						if (crdt == null) {
-							return new Uint8Array();
-						}
-
-						return StatelessSyncMessage.encode({
-							type: StatelessMessageType.SELECT,
-							crdt
-						});
+						return this.selectNextCrdt(message.crdt);
 					}
 
 					throw new Error("SELECT_RESPONSE must include crdt");
@@ -124,6 +78,33 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 			default:
 				throw new Error(`recieved unknown message type: ${message.type}`);
 		}
+	}
+
+	private selectNextProtocol (crdt: string, protocol?: string) {
+		const next = this.getNextProtocol(crdt, protocol);
+
+		if (next == null) {
+			return this.selectNextCrdt(crdt);
+		}
+
+		return StatelessSyncMessage.encode({
+			type: StatelessMessageType.SELECT,
+			crdt,
+			protocol: next
+		});
+	}
+
+	private selectNextCrdt (name?: string) {
+		const crdt = this.getNextCrdt(name);
+
+		if (crdt == null) {
+			return new Uint8Array();
+		}
+
+		return StatelessSyncMessage.encode({
+			type: StatelessMessageType.SELECT,
+			crdt
+		});
 	}
 
 	private getNextCrdt(last?: string) {
