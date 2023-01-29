@@ -53,7 +53,9 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 
 						return StatelessSyncMessage.encode({
 							type: StatelessMessageType.SYNC,
-							sync: synchronizer.sync(undefined, context)
+							sync: synchronizer.sync(undefined, context),
+							crdt: message.crdt,
+							protocol: message.protocol
 						});
 					}
 
@@ -73,9 +75,74 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 
 				throw new Error("SELECT_RESPONSE must include crdt");
 			case StatelessMessageType.SYNC_RESPONSE:
-				return this.handleCRDTSyncResponse(message, context.id);
+				{
+					if (message.protocol == null || message.crdt == null) {
+						throw new Error("missing protocol or crdt");
+					}
+
+					if (message.sync == null || message.sync.length === 0) {
+						return new Uint8Array();
+					}
+
+					const crdt = this.components.getCrdt(message.crdt);
+
+					if (crdt == null || !isSynchronizableCRDT(crdt)) {
+						return StatelessSyncMessage.encode({
+							type: StatelessMessageType.SELECT_RESPONSE,
+							accept: false,
+							crdt: message.crdt
+							// Don't include protocol here since we want to reject the CRDT itself.
+						});
+					}
+
+					const synchronizer = (crdt as SynchronizableCRDT).getSynchronizer(message.protocol);
+
+					if (synchronizer == null) {
+						return StatelessSyncMessage.encode({
+							type: StatelessMessageType.SELECT_RESPONSE,
+							accept: false,
+							crdt: message.crdt,
+							protocol: message.protocol
+						});
+					}
+
+					return StatelessSyncMessage.encode({
+						type: StatelessMessageType.SYNC,
+						sync: synchronizer.sync(message.sync, context)
+					});
+				}
 			case StatelessMessageType.SYNC:
-				return this.handleCRDTSync(message, context.id);
+				if (message.protocol == null || message.crdt == null) {
+					throw new Error("missing protocol or crdt");
+				}
+
+				const crdt = this.components.getCrdt(message.crdt);
+
+				if (crdt == null || !isSynchronizableCRDT(crdt)) {
+					return StatelessSyncMessage.encode({
+						type: StatelessMessageType.SELECT_RESPONSE,
+						accept: false,
+						crdt: message.crdt
+						// Don't include protocol here since we want to reject the CRDT itself.
+					});
+				}
+
+				const synchronizer = (crdt as SynchronizableCRDT).getSynchronizer(message.protocol);
+
+				if (synchronizer == null) {
+					return StatelessSyncMessage.encode({
+						type: StatelessMessageType.SELECT_RESPONSE,
+						accept: false,
+						crdt: message.crdt,
+						protocol: message.protocol
+					});
+				}
+
+				return StatelessSyncMessage.encode({
+					type: StatelessMessageType.SYNC_RESPONSE,
+					sync: synchronizer.sync(message.sync, context)
+				});
+
 			case StatelessMessageType.SELECT:
 				if (message.crdt != null && message.protocol != null) {
 					// Trying to select protocol
