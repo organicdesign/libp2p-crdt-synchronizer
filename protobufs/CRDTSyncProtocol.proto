@@ -25,6 +25,21 @@ message SyncMessage {
 	optional bool accept = 5;
 }
 
+enum StatelessMessageType {
+	SELECT = 0;
+	SELECT_RESPONSE = 1;
+	SYNC = 2;
+	SYNC_RESPONSE = 3;
+}
+
+message StatelessSyncMessage {
+	StatelessMessageType type = 1;
+	optional bytes sync = 2;
+	optional string crdt = 3;
+	optional string protocol = 4;
+	optional bool accept = 5;
+}
+
 message SyncMessageWrapper {
 	uint32 id = 1;
 	bytes data = 2;
