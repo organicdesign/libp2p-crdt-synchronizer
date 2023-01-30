@@ -87,23 +87,13 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 					const crdt = this.components.getCrdt(message.crdt);
 
 					if (crdt == null || !isSynchronizableCRDT(crdt)) {
-						return StatelessSyncMessage.encode({
-							type: StatelessMessageType.SELECT_RESPONSE,
-							accept: false,
-							crdt: message.crdt
-							// Don't include protocol here since we want to reject the CRDT itself.
-						});
+						return this.rejectCrdt(message.crdt);
 					}
 
 					const synchronizer = (crdt as SynchronizableCRDT).getSynchronizer(message.protocol);
 
 					if (synchronizer == null) {
-						return StatelessSyncMessage.encode({
-							type: StatelessMessageType.SELECT_RESPONSE,
-							accept: false,
-							crdt: message.crdt,
-							protocol: message.protocol
-						});
+						return this.rejectProtocol(message.crdt, message.protocol);
 					}
 
 					return StatelessSyncMessage.encode({
@@ -121,23 +111,13 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 				const crdt = this.components.getCrdt(message.crdt);
 
 				if (crdt == null || !isSynchronizableCRDT(crdt)) {
-					return StatelessSyncMessage.encode({
-						type: StatelessMessageType.SELECT_RESPONSE,
-						accept: false,
-						crdt: message.crdt
-						// Don't include protocol here since we want to reject the CRDT itself.
-					});
+					return this.rejectCrdt(message.crdt);
 				}
 
 				const synchronizer = (crdt as SynchronizableCRDT).getSynchronizer(message.protocol);
 
 				if (synchronizer == null) {
-					return StatelessSyncMessage.encode({
-						type: StatelessMessageType.SELECT_RESPONSE,
-						accept: false,
-						crdt: message.crdt,
-						protocol: message.protocol
-					});
+					return this.rejectProtocol(message.crdt, message.protocol);
 				}
 
 				return StatelessSyncMessage.encode({
@@ -153,37 +133,65 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 					const crdt = this.components.getCrdt(message.crdt);
 
 					if (crdt == null || !isSynchronizableCRDT(crdt)) {
-						return StatelessSyncMessage.encode({
-							type: StatelessMessageType.SELECT_RESPONSE,
-							accept: false,
-							crdt: message.crdt
-							// Don't include protocol here since we want to reject the CRDT itself.
-						});
+						return this.rejectCrdt(message.crdt);
 					}
 
 					const synchronizer = (crdt as SynchronizableCRDT).getSynchronizer(message.protocol);
 
-					return StatelessSyncMessage.encode({
-						type: StatelessMessageType.SELECT_RESPONSE,
-						accept: synchronizer != null,
-						crdt: message.crdt,
-						protocol: message.protocol
-					});
+					if (synchronizer == null) {
+						return this.rejectProtocol(message.crdt, message.protocol);
+					}
+
+					return this.acceptProtocol(message.crdt, message.protocol);
 				}
 
 				if (message.crdt != null) {
 					// Trying to select CRDT
-					return StatelessSyncMessage.encode({
-						type: StatelessMessageType.SELECT_RESPONSE,
-						accept: this.components.getCrdt(message.crdt) != null,
-						crdt: message.crdt
-					});
+					if (this.components.getCrdt(message.crdt) == null) {
+						return this.rejectCrdt(message.crdt);
+					}
+
+					return this.acceptCrdt(message.crdt);
 				}
 
 				throw new Error("SELECT must include crdt");
 			default:
 				throw new Error(`recieved unknown message type: ${message.type}`);
 		}
+	}
+
+	private acceptProtocol (crdt: string, protocol: string) {
+		return StatelessSyncMessage.encode({
+			type: StatelessMessageType.SELECT_RESPONSE,
+			accept: true,
+			crdt,
+			protocol
+		});
+	}
+
+	private acceptCrdt (crdt: string) {
+		return StatelessSyncMessage.encode({
+			type: StatelessMessageType.SELECT_RESPONSE,
+			accept: true,
+			crdt
+		});
+	}
+
+	private rejectProtocol (crdt: string, protocol: string) {
+		return StatelessSyncMessage.encode({
+			type: StatelessMessageType.SELECT_RESPONSE,
+			accept: false,
+			crdt,
+			protocol
+		});
+	}
+
+	private rejectCrdt (crdt: string) {
+		return StatelessSyncMessage.encode({
+			type: StatelessMessageType.SELECT_RESPONSE,
+			accept: false,
+			crdt
+		});
 	}
 
 	// Create a messsage that selects the next protocol.
