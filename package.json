@@ -1,7 +1,7 @@
 {
   "type": "module",
   "name": "@organicdesign/libp2p-crdt-synchronizer",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "A CRDT synchronizer for Libp2p.",
   "keywords": [
     "libp2p",
