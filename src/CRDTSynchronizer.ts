@@ -1,7 +1,7 @@
 import type { PubSub } from "@libp2p/interface-pubsub";
 import type { PeerId } from "@libp2p/interface-peer-id";
 import type { Startable } from "@libp2p/interfaces/startable";
-import type { CRDT, SynchronizableCRDT  } from "@organicdesign/crdt-interfaces";
+import type { CRDT, SynchronizableCRDT  } from "../../crdt-interfaces/src/index.js";
 import {
 	createMessageHandler,
 	MessageHandler,
@@ -10,7 +10,7 @@ import {
 } from "@organicdesign/libp2p-message-handler";
 import { logger } from "@libp2p/logger";
 import { StatelessSyncMessage, SyncMessageWrapper } from "./CRDTSyncProtocol.js";
-import { CRDTMapSynchronizer } from "./stateless-crdt-map-synchronizer.js";
+import { CRDTMapSynchronizer } from "../../crdt-map-synchronizer/src/index.js";
 
 const log = {
 	general: logger("libp2p:crdt-synchronizer"),
@@ -67,8 +67,8 @@ export class CRDTSynchronizer implements Startable {
 
 		this.synchronizer = new CRDTMapSynchronizer({
 			getId: () => this.components.peerId.toBytes(),
-			getCRDTKeys: () => this.CRDTNames,
-			getCrdt: (key: string) => this.crdts.get(key)
+			keys: () => this.CRDTNames,
+			get: (key: string) => this.crdts.get(key)
 		});
 	}
 

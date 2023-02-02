@@ -1,7 +1,7 @@
 import type { PeerId } from "@libp2p/interface-peer-id";
 import type { ConnectionManager } from "@libp2p/interface-connection-manager";
 import type { Libp2p } from "@libp2p/interface-libp2p";
-import type { SynchronizableCRDT as CRDT } from "@organicdesign/crdt-interfaces";
+import type { SynchronizableCRDT as CRDT } from "../../crdt-interfaces/src/index.js";
 import { mockRegistrar, mockConnectionManager, mockNetwork } from "@libp2p/interface-mocks";
 import { stubInterface } from "ts-sinon";
 import { start } from "@libp2p/interfaces/startable";
@@ -52,10 +52,10 @@ const mockCRDT = (() => {
 				return ["/test/0.1.0"];
 			},
 
-			getSynchronizer: () => ({
+			getSynchronizers: () => [{
 				protocol: "/test/0.1.0",
 
-				sync (data): Uint8Array | undefined {
+				sync (data?: Uint8Array): Uint8Array | undefined {
 					if (data == null) {
 						return state;
 					}
@@ -64,7 +64,7 @@ const mockCRDT = (() => {
 						state = data;
 					}
 				}
-			}),
+			}],
 
 			toValue () {
 				return state;
