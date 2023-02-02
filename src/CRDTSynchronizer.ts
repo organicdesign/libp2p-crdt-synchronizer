@@ -9,7 +9,7 @@ import {
 	MessageHandlerOpts
 } from "@organicdesign/libp2p-message-handler";
 import { logger } from "@libp2p/logger";
-import { StatelessSyncMessage, SyncMessageWrapper } from "./CRDTSyncProtocol.js";
+import { SyncMessage } from "./CRDTSyncProtocol.js";
 import { CRDTMapSynchronizer } from "../../crdt-map-synchronizer/src/index.js";
 
 const log = {
@@ -123,15 +123,11 @@ export class CRDTSynchronizer implements Startable {
 					break;
 				}
 
-				log.peers("Req: %o", StatelessSyncMessage.decode(syncData));
-
 				const response = await this.request(syncData, peerId);
 
 				if (response.length === 0) {
 					break;
 				}
-
-				log.peers("Res: %o", StatelessSyncMessage.decode(response));
 
 				syncData = this.synchronizer.sync(response, { id: peerId.toBytes(), syncId: 0 });
 			}
@@ -146,12 +142,12 @@ export class CRDTSynchronizer implements Startable {
 	}
 
 	private async handleMessage (data: Uint8Array, peerId: PeerId): Promise<void> {
-		const message = SyncMessageWrapper.decode(data);
+		const message = SyncMessage.decode(data);
 
 		if (message.request === true) {
 			const response = this.synchronizer.sync(message.data, { id: peerId.toBytes(), syncId: message.id });
 
-			await this.handler.send(SyncMessageWrapper.encode({
+			await this.handler.send(SyncMessage.encode({
 				data: response ?? new Uint8Array(),
 				id: message.id
 			}), peerId);
@@ -172,7 +168,7 @@ export class CRDTSynchronizer implements Startable {
 			this.msgPromises.set(id, resolve);
 		});
 
-		await this.handler.send(SyncMessageWrapper.encode({
+		await this.handler.send(SyncMessage.encode({
 			request: true,
 			data,
 			id

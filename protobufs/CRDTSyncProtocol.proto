@@ -1,46 +1,6 @@
 syntax = "proto3";
 
-enum MessageType {
-	SELECT_CRDT = 0;
-	SELECT_PROTOCOL = 1;
-	SELECT_RESPONSE = 2;
-	SYNC = 3;
-	SYNC_RESPONSE = 4;
-}
-
 message SyncMessage {
-	// The message type.
-	MessageType type = 1;
-
-	// The message identifier.
-	uint32 id = 2;
-
-	// Sync data, used in SYNC & SYNC_RESPONSE messages.
-	optional bytes sync = 3;
-
-	// Selection data, used in SELECT_CRDT & SELECT_PROTOCOL.
-	optional string select = 4;
-
-	// Selection response, used in SELECT_RESPONSE
-	optional bool accept = 5;
-}
-
-enum StatelessMessageType {
-	SELECT = 0;
-	SELECT_RESPONSE = 1;
-	SYNC = 2;
-	SYNC_RESPONSE = 3;
-}
-
-message StatelessSyncMessage {
-	StatelessMessageType type = 1;
-	optional bytes sync = 2;
-	optional string crdt = 3;
-	optional string protocol = 4;
-	optional bool accept = 5;
-}
-
-message SyncMessageWrapper {
 	uint32 id = 1;
 	bytes data = 2;
 	optional bool request = 3;
