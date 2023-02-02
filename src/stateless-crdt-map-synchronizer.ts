@@ -4,7 +4,8 @@ import {
 	SyncContext,
 	toSynchronizable,
 	isSynchronizable
-} from "@organicdesign/crdt-interfaces";
+} from "../../crdt-interfaces/src/index.js";
+//} from "@organicdesign/crdt-interfaces";
 import { StatelessSyncMessage, StatelessMessageType } from "./CRDTSyncProtocol.js";
 
 export interface CRDTMapSyncComponents {
@@ -99,7 +100,7 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 		}
 
 		if (message.sync == null || message.sync.length === 0) {
-			return;
+			return this.selectNextCrdt(message.crdt);
 		}
 
 		const crdt = this.components.getCrdt(message.crdt);
@@ -262,7 +263,7 @@ export class CRDTMapSynchronizer implements CRDTSynchronizer {
 		return this.getNext(iterable, last);
 	}
 
-	// Get the next valuee from an iterable.
+	// Get the next value from an iterable.
 	private getNext (iterable: Iterable<string>, last?: string): string | undefined {
 		const iterator = iterable[Symbol.iterator]();
 		let curr = iterator.next();
