@@ -16,6 +16,7 @@ A CRDT synchronizer for Libp2p.
     - [sync](#sync)
     - [CRDTNames](#crdtnames)
 - [Logging](#logging)
+- [Building](#building)
 - [Tests](#tests)
 - [To-Do](#to-do)
 
@@ -162,12 +163,26 @@ Or in the browser:
 localStorage.setItem("debug", "libp2p:crdt-synchronizer*");
 ```
 
+## Building
+
+To build the project files:
+
+```
+npm run build:protos && npm run build
+```
+
 ## Tests
 
 To run the test suite:
 
 ```
 npm run test
+```
+
+To lint the files:
+
+```
+npm run lint
 ```
 
 ## To-Do
