@@ -1,13 +1,12 @@
 import type { Uint8ArrayList } from 'uint8arraylist';
 import type { Codec } from 'protons-runtime';
-export interface CRDTSyncMessage {
-    name: string;
-    data: Uint8Array;
+export interface SyncMessage {
     id: number;
+    data: Uint8Array;
     request?: boolean;
 }
-export declare namespace CRDTSyncMessage {
-    const codec: () => Codec<CRDTSyncMessage>;
-    const encode: (obj: CRDTSyncMessage) => Uint8Array;
-    const decode: (buf: Uint8Array | Uint8ArrayList) => CRDTSyncMessage;
+export declare namespace SyncMessage {
+    const codec: () => Codec<SyncMessage>;
+    const encode: (obj: SyncMessage) => Uint8Array;
+    const decode: (buf: Uint8Array | Uint8ArrayList) => SyncMessage;
 }

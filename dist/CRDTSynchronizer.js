@@ -9,7 +9,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 import { createMessageHandler } from "@organicdesign/libp2p-message-handler";
 import { logger } from "@libp2p/logger";
-import { CRDTSyncMessage } from "./CRDTSyncProtocol.js";
+import { createCRDTMapSynchronizer } from "@organicdesign/crdt-map-synchronizer";
+import { SyncMessage } from "./CRDTSyncProtocol.js";
 const log = {
     general: logger("libp2p:crdt-synchronizer"),
     peers: logger("libp2p:crdt-synchronizer:peers"),
@@ -39,6 +40,11 @@ export class CRDTSynchronizer {
         this.components = components;
         this.handler = createMessageHandler(options)(components);
         this.handler.handle((message, peerId) => this.handleMessage(message, peerId));
+        this.synchronizer = createCRDTMapSynchronizer()({
+            getId: () => this.components.peerId.toBytes(),
+            keys: () => this.CRDTNames,
+            get: (key) => this.crdts.get(key)
+        });
     }
     start() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -72,35 +78,18 @@ export class CRDTSynchronizer {
             log.general("synchronizing with connected peers");
             const connections = this.components.getConnections();
             for (const connection of connections) {
-                log.peers("synchronizing to peer: %p", connection.remotePeer);
-                for (const [name, crdt] of this.crdts) {
-                    log.crdts("synchronizing crdt: %s", name);
-                    const messageId = this.genMsgId();
-                    const peerId = connection.remotePeer;
-                    let sync = crdt.sync(undefined, { id: peerId.toBytes(), syncId: messageId });
-                    while (sync != null) {
-                        try {
-                            yield this.handler.send(CRDTSyncMessage.encode({
-                                name,
-                                data: sync !== null && sync !== void 0 ? sync : new Uint8Array([]),
-                                id: messageId,
-                                request: true
-                            }), peerId);
-                        }
-                        catch (error) {
-                            log.general.error("sync failed: %o", error);
-                            break;
-                        }
-                        const response = yield new Promise((resolve) => {
-                            this.msgPromises.set(messageId, resolve);
-                        });
-                        // Remote does not have any data to provide.
-                        if (response.data.length === 0) {
-                            break;
-                        }
-                        sync = crdt.sync(response.data, { id: peerId.toBytes(), syncId: messageId });
+                const peerId = connection.remotePeer;
+                log.peers("synchronizing to peer: %p", peerId);
+                let syncData = this.synchronizer.sync(undefined, { id: peerId.toBytes(), syncId: 0 });
+                for (let i = 0; i < 100; i++) {
+                    if (syncData == null) {
+                        break;
                     }
-                    log.crdts("synchronized crdt: %s", name);
+                    const response = yield this.request(syncData, peerId);
+                    if (response.length === 0) {
+                        break;
+                    }
+                    syncData = this.synchronizer.sync(response, { id: peerId.toBytes(), syncId: 0 });
                 }
                 log.peers("synchronized to peer: %p", connection.remotePeer);
             }
@@ -110,34 +99,35 @@ export class CRDTSynchronizer {
     getCRDT(name) {
         return this.crdts.get(name);
     }
-    handleMessage(message, peerId) {
+    handleMessage(data, peerId) {
         return __awaiter(this, void 0, void 0, function* () {
-            const data = CRDTSyncMessage.decode(message);
-            if (data.request === true) {
-                yield this.handleSync(data, peerId);
+            const message = SyncMessage.decode(data);
+            if (message.request === true) {
+                const response = this.synchronizer.sync(message.data, { id: peerId.toBytes(), syncId: message.id });
+                yield this.handler.send(SyncMessage.encode({
+                    data: response !== null && response !== void 0 ? response : new Uint8Array(),
+                    id: message.id
+                }), peerId);
+                return;
             }
-            else {
-                // Resolve promise.
-                const resolver = this.msgPromises.get(data.id);
-                this.msgPromises.delete(data.id);
-                resolver === null || resolver === void 0 ? void 0 : resolver(data);
-            }
+            const resolver = this.msgPromises.get(message.id);
+            this.msgPromises.delete(message.id);
+            resolver === null || resolver === void 0 ? void 0 : resolver(message.data);
         });
     }
-    handleSync(message, peerId) {
-        var _a;
+    // Make a RPC style request to a peer.
+    request(data, peerId) {
         return __awaiter(this, void 0, void 0, function* () {
-            const crdt = this.crdts.get(message.name);
-            let response = new Uint8Array();
-            if (crdt != null && message.data.length !== 0) {
-                response = (_a = crdt.sync(message.data, { id: peerId.toBytes(), syncId: message.id })) !== null && _a !== void 0 ? _a : new Uint8Array();
-            }
-            const newMessage = CRDTSyncMessage.encode({
-                name: message.name,
-                data: response,
-                id: message.id
+            const id = this.genMsgId();
+            const promise = new Promise((resolve) => {
+                this.msgPromises.set(id, resolve);
             });
-            yield this.handler.send(newMessage, peerId);
+            yield this.handler.send(SyncMessage.encode({
+                request: true,
+                data,
+                id
+            }), peerId);
+            return yield promise;
         });
     }
 }
