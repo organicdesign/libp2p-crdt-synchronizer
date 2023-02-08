@@ -1,3 +1,9 @@
+## [0.4.0](https://github.com/organicdesign/libp2p-crdt-synchronizer/compare/v0.3.1...v0.4.0) (2023-02-08)
+
+### Changed
+
+* Updated system to `@organicdesign/crdt-interfaces@4.0.0` and refactored protocol into separate package.
+
 ## [0.3.1](https://github.com/organicdesign/libp2p-crdt-synchronizer/compare/v0.3.0...v0.3.1) (2023-02-02)
 
 ### Fixed
