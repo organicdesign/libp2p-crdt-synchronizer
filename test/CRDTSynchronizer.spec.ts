@@ -1,11 +1,11 @@
 import type { PeerId } from "@libp2p/interface-peer-id";
 import type { ConnectionManager } from "@libp2p/interface-connection-manager";
 import type { Libp2p } from "@libp2p/interface-libp2p";
-import type { SynchronizableCRDT as CRDT } from "@organicdesign/crdt-interfaces";
 import { mockRegistrar, mockConnectionManager, mockNetwork } from "@libp2p/interface-mocks";
 import { stubInterface } from "ts-sinon";
 import { start } from "@libp2p/interfaces/startable";
 import { createRSAPeerId } from "@libp2p/peer-id-factory";
+import { mockCRDT } from "@organicdesign/crdt-tests";
 import { CRDTSynchronizerComponents, CRDTSynchronizer, createCRDTSynchronizer } from "../src/CRDTSynchronizer";
 
 interface TestCRDTSynchronizerComponents extends CRDTSynchronizerComponents {
@@ -36,42 +36,6 @@ const createComponents = async (): Promise<TestCRDTSynchronizerComponents> => {
 
 	return components;
 };
-
-const mockCRDT = (() => {
-	let i = 0;
-
-	return (): CRDT => {
-		i++;
-
-		let state = new Uint8Array([i, i, i]);
-
-		return {
-			id: new Uint8Array([i]),
-
-			getSynchronizerProtocols () {
-				return ["/test/0.1.0"];
-			},
-
-			getSynchronizers: () => [{
-				protocol: "/test/0.1.0",
-
-				sync (data?: Uint8Array): Uint8Array | undefined {
-					if (data == null) {
-						return state;
-					}
-
-					if (data[0] > state[0]) {
-						state = data;
-					}
-				}
-			}],
-
-			toValue () {
-				return state;
-			}
-		} as CRDT;
-	};
-})();
 
 let localSynchronizer: CRDTSynchronizer;
 let remoteSynchronizer: CRDTSynchronizer;
