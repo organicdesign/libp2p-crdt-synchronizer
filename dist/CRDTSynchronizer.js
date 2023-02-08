@@ -17,10 +17,10 @@ const log = {
     crdts: logger("libp2p:crdt-synchronizer:crdts")
 };
 export class CRDTSynchronizer {
-    get CRDTNames() {
-        return [...this.crdts.keys()];
+    keys() {
+        return this.crdts.keys();
     }
-    setCRDT(name, crdt) {
+    set(name, crdt) {
         this.crdts.set(name, crdt);
     }
     constructor(components, options = {}) {
@@ -42,7 +42,7 @@ export class CRDTSynchronizer {
         this.handler.handle((message, peerId) => this.handleMessage(message, peerId));
         this.synchronizer = createCRDTMapSynchronizer()({
             getId: () => this.components.peerId.toBytes(),
-            keys: () => this.CRDTNames,
+            keys: () => this.keys(),
             get: (key) => this.crdts.get(key)
         });
     }
@@ -96,7 +96,7 @@ export class CRDTSynchronizer {
             log.general("synchronized with connected peers");
         });
     }
-    getCRDT(name) {
+    get(name) {
         return this.crdts.get(name);
     }
     handleMessage(data, peerId) {

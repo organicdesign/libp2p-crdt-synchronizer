@@ -1,7 +1,7 @@
 import type { PubSub } from "@libp2p/interface-pubsub";
 import type { PeerId } from "@libp2p/interface-peer-id";
 import type { Startable } from "@libp2p/interfaces/startable";
-import type { CRDT, SynchronizableCRDT  } from "@organicdesign/crdt-interfaces";
+import type { CRDT } from "@organicdesign/crdt-interfaces";
 import {
 	createMessageHandler,
 	MessageHandler,
@@ -31,7 +31,7 @@ export interface CRDTSynchronizerComponents extends MessageHandlerComponents {
 export class CRDTSynchronizer implements Startable {
 	private interval: ReturnType<typeof setInterval>;
 	private readonly options: CRDTSynchronizerOpts;
-	private readonly crdts = new Map<string, SynchronizableCRDT>();
+	private readonly crdts = new Map<string, CRDT>();
 	private readonly components: CRDTSynchronizerComponents;
 	private readonly msgPromises = new Map<number, (value: Uint8Array) => void>();
 	private readonly handler: MessageHandler;
@@ -44,11 +44,11 @@ export class CRDTSynchronizer implements Startable {
 		return () => id++;
 	})();
 
-	get CRDTNames (): string[] {
-		return [...this.crdts.keys()];
+	keys (): Iterable<string> {
+		return this.crdts.keys();
 	}
 
-	setCRDT (name: string, crdt: SynchronizableCRDT): void {
+	set (name: string, crdt: CRDT): void {
 		this.crdts.set(name, crdt);
 	}
 
@@ -67,7 +67,7 @@ export class CRDTSynchronizer implements Startable {
 
 		this.synchronizer = createCRDTMapSynchronizer()({
 			getId: () => this.components.peerId.toBytes(),
-			keys: () => this.CRDTNames,
+			keys: () => this.keys(),
 			get: (key: string) => this.crdts.get(key)
 		});
 	}
@@ -137,7 +137,7 @@ export class CRDTSynchronizer implements Startable {
 		log.general("synchronized with connected peers");
 	}
 
-	getCRDT (name: string): CRDT | undefined {
+	get (name: string): CRDT | undefined {
 		return this.crdts.get(name);
 	}
 

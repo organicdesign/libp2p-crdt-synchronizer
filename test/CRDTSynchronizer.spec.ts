@@ -83,9 +83,9 @@ describe("crdts", () => {
 		for (const key of keys) {
 			const crdt = mockCRDT();
 
-			localSynchronizer.setCRDT(key, crdt);
+			localSynchronizer.set(key, crdt);
 
-			expect(localSynchronizer.getCRDT(key)).toStrictEqual(crdt);
+			expect(localSynchronizer.get(key)).toStrictEqual(crdt);
 		}
 	});
 
@@ -93,10 +93,10 @@ describe("crdts", () => {
 		const keys = ["test-1", "test-2", "test-3"];
 
 		for (const key of keys) {
-			localSynchronizer.setCRDT(key, mockCRDT());
+			localSynchronizer.set(key, mockCRDT());
 		}
 
-		expect(localSynchronizer.CRDTNames).toStrictEqual(keys);
+		expect([...localSynchronizer.keys()]).toStrictEqual(keys);
 	});
 });
 
@@ -117,8 +117,8 @@ describe("synchronization", () => {
 		const crdt1 = mockCRDT();
 		const crdt2 = mockCRDT();
 
-		localSynchronizer.setCRDT("crdt", crdt1);
-		remoteSynchronizer.setCRDT("crdt", crdt2);
+		localSynchronizer.set("crdt", crdt1);
+		remoteSynchronizer.set("crdt", crdt2);
 
 		await remoteSynchronizer.sync();
 		await localSynchronizer.sync();
