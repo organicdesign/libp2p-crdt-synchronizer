@@ -1,3 +1,9 @@
+## [0.3.1](https://github.com/organicdesign/libp2p-crdt-synchronizer/compare/v0.3.0...v0.3.1) (2023-02-02)
+
+### Fixed
+
+* Fixed security vulnerabilities in packages.
+
 ## [0.3.0](https://github.com/organicdesign/libp2p-crdt-synchronizer/compare/v0.2.2...v0.3.0) (2023-01-20)
 
 ### Changed
