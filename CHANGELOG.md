@@ -1,4 +1,4 @@
-## [0.4.0](https://github.com/organicdesign/libp2p-crdt-synchronizer/compare/v0.3.1...v0.4.0) (2023-02-08)
+## [0.4.0](https://github.com/organicdesign/libp2p-crdt-synchronizer/compare/v0.3.1...v0.4.0) (2023-02-09)
 
 ### Changed
 
