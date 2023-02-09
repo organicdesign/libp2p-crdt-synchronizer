@@ -48,7 +48,6 @@
   },
   "dependencies": {
     "@libp2p/logger": "^2.0.5",
-    "@organicdesign/buffer-collections": "^0.1.4",
     "@organicdesign/crdt-map-synchronizer": "^0.1.0",
     "@organicdesign/libp2p-message-handler": "^0.4.1",
     "protons-runtime": "^4.0.1"
