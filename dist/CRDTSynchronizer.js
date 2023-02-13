@@ -38,19 +38,19 @@ export class CRDTSynchronizer {
             autoSync: (_c = options.autoSync) !== null && _c !== void 0 ? _c : true
         };
         this.components = components;
-        this.handler = createMessageHandler(options)(components);
-        this.handler.handle((message, peerId) => this.handleMessage(message, peerId));
-        this.synchronizer = createCRDTMapSynchronizer()({
-            getId: () => this.components.peerId.toBytes(),
-            keys: () => this.keys(),
-            get: (key) => this.crdts.get(key)
-        });
     }
     start() {
         return __awaiter(this, void 0, void 0, function* () {
             if (this.isStarted()) {
                 return;
             }
+            this.handler = createMessageHandler({})(this.components);
+            this.handler.handle((message, peerId) => this.handleMessage(message, peerId));
+            this.synchronizer = createCRDTMapSynchronizer()({
+                getId: () => this.components.peerId.toBytes(),
+                keys: () => this.keys(),
+                get: (key) => this.crdts.get(key)
+            });
             yield this.handler.start();
             if (this.options.autoSync) {
                 this.interval = setInterval(() => this.sync(), this.options.interval);

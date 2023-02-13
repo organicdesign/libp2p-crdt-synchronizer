@@ -17,8 +17,8 @@ export declare class CRDTSynchronizer implements Startable {
     private readonly crdts;
     private readonly components;
     private readonly msgPromises;
-    private readonly handler;
-    private readonly synchronizer;
+    private handler;
+    private synchronizer;
     private started;
     private readonly genMsgId;
     keys(): Iterable<string>;

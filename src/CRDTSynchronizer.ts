@@ -34,8 +34,8 @@ export class CRDTSynchronizer implements Startable {
 	private readonly crdts = new Map<string, CRDT>();
 	private readonly components: CRDTSynchronizerComponents;
 	private readonly msgPromises = new Map<number, (value: Uint8Array) => void>();
-	private readonly handler: MessageHandler;
-	private readonly synchronizer: CRDTMapSynchronizer;
+	private handler: MessageHandler;
+	private synchronizer: CRDTMapSynchronizer;
 	private started = false;
 
 	private readonly genMsgId = (() => {
@@ -60,8 +60,14 @@ export class CRDTSynchronizer implements Startable {
 		};
 
 		this.components = components;
+	}
 
-		this.handler = createMessageHandler(options)(components);
+	async start (): Promise<void> {
+		if (this.isStarted()) {
+			return;
+		}
+
+		this.handler = createMessageHandler({})(this.components);
 
 		this.handler.handle((message, peerId) => this.handleMessage(message, peerId));
 
@@ -70,12 +76,6 @@ export class CRDTSynchronizer implements Startable {
 			keys: () => this.keys(),
 			get: (key: string) => this.crdts.get(key)
 		});
-	}
-
-	async start (): Promise<void> {
-		if (this.isStarted()) {
-			return;
-		}
 
 		await this.handler.start();
 
